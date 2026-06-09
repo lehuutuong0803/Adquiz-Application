@@ -104,6 +104,25 @@ Update this file whenever a new architectural decision is made.
 
 ---
 
+## ADR-010 — Security at Every Service Layer
+
+**Decision:** Implement JWT validation at both the API gateway and each individual service.
+
+**Reasoning:**
+- Network isolation alone is not sufficient — internal threats still exist
+- A compromised service could call another service without authentication
+- Developer mistakes could create silent security holes
+- Zero Trust principle — every service independently validates identity
+- Per-service security adds minimal code but significant protection
+
+**Implementation:**
+- API Gateway — first line of defense, validates JWT and blocks invalid requests
+- Each service — independently validates JWT signature using Keycloak public keys
+- `/actuator/health` endpoint is public on all services — needed for Docker healthchecks
+- All other endpoints require a valid JWT token
+
+---
+
 ## ADR-009 — Tech Stack
 
 **Decision:** The following tech stack was chosen for each service.

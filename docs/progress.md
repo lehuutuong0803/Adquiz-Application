@@ -131,10 +131,44 @@ Update this file at the end of every session.
 
 **Stopped at:** About to run ai-generation-service for the first time
 
+---
+
+### Session 2 — [2026-06-09]
+**Discussed:**
+- Ran ai-generation-service successfully on port 8083
+- Tested POST /api/generate/questions — all 3 tests passed (200, 400 validation, interview prep)
+- Started content-service setup:
+  - Generated project from start.spring.io
+  - Updated pom.xml to inherit from adquiz-parent
+  - Added oauth2-resource-server dependency
+  - Created application.yaml with all sections:
+    - server port 8081
+    - datasource (content_db)
+    - JPA (ddl-auto: validate)
+    - Flyway (db/migration)
+    - Kafka (producer + consumer)
+    - Security (JWT issuer-uri)
+    - Custom ai-generation properties
+    - Actuator
+  - Created package structure:
+    controller, service, repository, entity,
+    dto, mapper, kafka, config, exception
+  - Created db/migration folder for Flyway scripts
+- Decided to implement JWT validation at every service (Zero Trust — ADR-010)
+- Updated Spring Boot to 3.5.14, Spring Cloud to 2025.0.0, Spring AI to 1.0.8
+
+**Stopped at:** About to write Flyway migration scripts for content-service
+
 **Next session should:**
-1. Run ai-generation-service and verify it starts correctly
-2. Test POST /api/generate/questions with Postman
-3. Fix any startup issues
-4. Move to Phase 4 — content-service
+1. Write Flyway migration scripts (V1 through V5) for content-service tables:
+   - V1__create_topics_table.sql
+   - V2__create_questions_table.sql
+   - V3__create_quiz_sessions_table.sql
+   - V4__create_session_questions_table.sql
+   - V5__create_spaced_repetition_records_table.sql
+2. Create JPA entities for each table
+3. Create repositories
+4. Create SecurityConfig.java
+5. Create AiGenerationProperties.java (@ConfigurationProperties)
 
 ---
