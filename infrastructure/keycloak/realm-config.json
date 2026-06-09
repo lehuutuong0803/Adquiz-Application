@@ -1,0 +1,47 @@
+{
+    "realm": "adquiz", 
+    "enabled": true,
+    "accessTokenLifespan": 900,
+    "refreshTokenMaxReuse": 0,
+    "revokeRefreshToken": true,
+    "sslRequired": "none",
+    "clients": [
+        {
+            "clientId": "adquiz-frontend",
+            "enabled": true,
+            "publicClient": true,
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": false,
+            "redirectUris": [
+                "http://localhost:3000/*"
+            ],
+            "webOrigins": [
+                "http://localhost:3000"
+            ]
+        }
+    ],
+    "roles": {
+        "realm": [
+            {
+                "name": "STUDENT",
+                "description": "Can take quizzes and view personal progress"
+            }
+        ]
+    },
+    "users": [
+        {
+            "username": "testuser",
+            "email": "test@adquiz.com",
+            "enabled": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "test123",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["STUDENT"]
+        }
+    ]
+}
+

@@ -1,0 +1,24 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: ai-generation-service
+  ai:
+    openai:
+      # Never hardcode API keys - always read from environment variables
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          # Cost-effective model - good balance of quality and price for question generation
+          model: gpt-4o-mini
+          # Control creativity: 0.0 = deterministic, 1.0 = very creative
+          # 0.7 gives varied questions without being too random
+          temperature: 0.7
+
+# Actuator - expose health endpoint so Docker and other services can check if we're running
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

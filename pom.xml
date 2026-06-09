@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Provides default Spring Boot configurations and managed library versions -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.14</version>
+        <relativePath/>
+    </parent>
+
+    <!-- Project identity — packaging "pom" means this is a config container, not a runnable app -->
+    <groupId>com.adquiz</groupId>
+    <artifactId>adquiz-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>AdQuiz Parent</name>
+
+    <!-- Registers all services — "mvn install" at root builds all of them -->
+    <modules>
+<!--        <module>services/api-gateway</module>-->
+<!--        <module>services/content-service</module>-->
+        <module>services/ai-generation-service</module>
+<!--        <module>services/analytics-service</module>-->
+    </modules>
+
+    <!-- All version numbers defined here — change once, applies everywhere -->
+    <properties>
+        <java.version>21</java.version>
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
+        <spring-ai.version>1.0.8</spring-ai.version>
+        <mapstruct.version>1.5.5.Final</mapstruct.version>
+    </properties>
+
+    <!-- Declares versions available to services — not included until a service explicitly asks for it -->
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- Manages compatible versions for all Spring Cloud libraries (Gateway, etc.) -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Manages compatible versions for all Spring AI libraries (OpenAI, etc.) -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Object mapping between entities and DTOs — version managed here, opted in per service -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- Automatically included in ALL services — only truly universal dependencies live here -->
+    <dependencies>
+
+        <!-- Eliminates boilerplate code (@Getter, @Setter, @Builder, etc.) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Testing toolkit — JUnit 5, Mockito, AssertJ — only available during test phase -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+</project>
