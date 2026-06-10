@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface QuizSessionRepository extends JpaRepository<QuizSession, UUID> {
 
-    List<QuizSession> findByUserIdOrderByStartedAtDesc();
+    List<QuizSession> findByUserIdOrderByStartedAtDesc(UUID userId);
 
     Optional<QuizSession> findByIdAndUserId(UUID id, UUID userId);
 }
