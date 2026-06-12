@@ -5,7 +5,7 @@ Update this file at the end of every session.
 
 ---
 
-## Current Status: Architecture & Planning Phase
+## Current Status: Phase 4 — Content Service (In Progress)
 
 ---
 
@@ -45,8 +45,18 @@ Update this file at the end of every session.
 
 ## Phase 4 — Content Service
 
-- [ ] Set up full Spring Boot project structure
-- [ ] Implement database schema (Flyway migrations)
+- [x] Set up full Spring Boot project structure
+- [x] Implement database schema (Flyway migrations V1-V6)
+- [x] Create JPA entities (Topic, Question, QuizSession, SessionQuestion, SpacedRepetitionRecord)
+- [x] Create repositories with custom query methods
+- [x] Create SecurityConfig (JWT validation, stateless, health endpoint public)
+- [x] Create AiGenerationProperties (@ConfigurationProperties)
+- [x] Create DTOs (13 records covering all API contracts)
+- [x] Create MapStruct mappers (TopicMapper, QuizSessionMapper, SpacedRepetitionMapper)
+- [x] Create GlobalExceptionHandler (404, 400, 500)
+- [x] Implement TopicService + TopicController
+- [x] Seed test data (V6__seed_topics.sql)
+- [x] Verified GET /api/topics and GET /api/topics/{id}/subtopics work end to end
 - [ ] Implement question bank (topic + difficulty storage)
 - [ ] Implement quiz session management (create, track, end session)
 - [ ] Implement adaptive difficulty algorithm
@@ -159,16 +169,30 @@ Update this file at the end of every session.
 
 **Stopped at:** About to write Flyway migration scripts for content-service
 
+---
+
+### Session 3 — [2026-06-11]
+**Discussed:**
+- Wrote Flyway migration scripts V1-V5 (topics, questions, quiz_sessions, session_questions, spaced_repetition_records)
+- Wrote V6__seed_topics.sql (2 parent topics, 5 subtopics)
+- Created JPA entities for all 5 tables
+- Created 5 repositories with custom query methods
+- Created SecurityConfig.java (JWT validation, stateless, health public)
+- Created AiGenerationProperties.java (@ConfigurationProperties)
+- Created 13 DTOs as Java records
+- Created 3 MapStruct mappers
+- Created GlobalExceptionHandler (404, 400, 500)
+- Created TopicService + TopicController
+- Fixed MapStruct annotation processor in pom.xml build section
+- Fixed Keycloak directAccessGrantsEnabled and VERIFY_PROFILE issues
+- Verified GET /api/topics and GET /api/topics/{id}/subtopics end to end
+
+**Stopped at:** TopicService and TopicController verified working
+
 **Next session should:**
-1. Write Flyway migration scripts (V1 through V5) for content-service tables:
-   - V1__create_topics_table.sql
-   - V2__create_questions_table.sql
-   - V3__create_quiz_sessions_table.sql
-   - V4__create_session_questions_table.sql
-   - V5__create_spaced_repetition_records_table.sql
-2. Create JPA entities for each table
-3. Create repositories
-4. Create SecurityConfig.java
-5. Create AiGenerationProperties.java (@ConfigurationProperties)
+1. Implement SessionService + SessionController
+2. Implement adaptive difficulty algorithm
+3. Implement KafkaPublisher (ANSWER_SUBMITTED, SESSION_COMPLETED events)
+4. Integrate with ai-generation-service (REST call when question bank is low)
 
 ---
