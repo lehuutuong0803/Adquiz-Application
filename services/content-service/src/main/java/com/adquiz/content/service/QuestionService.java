@@ -63,8 +63,20 @@ public class QuestionService {
     }
 
     // Top up a specific bloom level if below threshold
-    public void topUpIfNeeded(Topic topic, int bloomLevel, Set<UUID> excludedQuestionIds) {
-        Set<UUID> answeredIds =
+    public void topUpIfNeeded(Topic topic, int bloomLevel,UUID userId, Set<UUID> answeredIds) {
+
+        long totalInBank = questionRepository.countByTopicIdAndBloomLevel(topic.getId(), (short) bloomLevel);
+
+        long remainingForUser = totalInBank - answeredIds.size();
+
+        if (remainingForUser < properties.getQuestionThreshold()) {
+            log.info("User {} has fewer than {} unseen questions for topic '{}' level {} — topping up",
+                    userId, properties.getQuestionThreshold(), topic.getName(), bloomLevel);
+
+            String parentName = topic.getParent() != null ? topic.getParent().getName() : "";
+            List<Question> newQuestions = fetchAndMapQuestions(topic, parentName,bloomLevel);
+            saveAllQuestions(newQuestions);
+        }
 
     }
 

@@ -1,6 +1,7 @@
 package com.adquiz.content.kafka;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 public record AnswerSubmittedEvent (
