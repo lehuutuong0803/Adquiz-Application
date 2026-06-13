@@ -18,11 +18,11 @@ public class AdaptiveAlgorithm {
             return Math.max(MIN_DIFFICULTY, currentDifficulty - 1);
         }
 
-        if (confidenceRating == 3 && consecutiveCorrect >= 2) {
+        if (confidenceRating == 3 && consecutiveCorrect % 2 == 0 && consecutiveCorrect > 0) {
             return Math.min(MAX_DIFFICULTY, currentDifficulty + 2);
         }
 
-        if (consecutiveCorrect >= 2) {
+        if (consecutiveCorrect % 2 == 0 && consecutiveCorrect > 0 ) {
             return  Math.min(MAX_DIFFICULTY, currentDifficulty + 1);
         }
         return currentDifficulty;

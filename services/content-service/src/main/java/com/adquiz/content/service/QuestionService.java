@@ -6,6 +6,7 @@ import com.adquiz.content.dto.questiongeneration.GeneratedQuestionResponse;
 import com.adquiz.content.entity.Question;
 import com.adquiz.content.entity.Topic;
 import com.adquiz.content.repository.QuestionRepository;
+import com.adquiz.content.repository.SessionQuestionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class QuestionService {
     private final QuestionRepository questionRepository;
     private final AiGenerationClient aiGenerationClient;
     private final AIGenerationProperties properties;
+    private final SessionQuestionRepository sessionQuestionRepository;
 
     // Check if question bank is empty for a topic
     public boolean isQuestionBankEmpty(UUID id) {
@@ -62,15 +64,7 @@ public class QuestionService {
 
     // Top up a specific bloom level if below threshold
     public void topUpIfNeeded(Topic topic, int bloomLevel, Set<UUID> excludedQuestionIds) {
-        long remaining = questionRepository.countByTopicIdAndBloomLevel(topic.getId(), (short) bloomLevel)
-                - excludedQuestionIds.size();
-
-        if (remaining < properties.getQuestionThreshold()) {
-            log.info("Question bank low for topic '{}' level {} — topping up", topic.getName(), bloomLevel);
-            String parentName = topic.getParent() != null ? topic.getParent().getName() : "";
-            List<Question> newQuestions = fetchAndMapQuestions(topic, parentName, bloomLevel);
-            saveAllQuestions(newQuestions);
-        }
+        Set<UUID> answeredIds =
 
     }
 

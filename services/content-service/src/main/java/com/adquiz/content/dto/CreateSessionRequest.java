@@ -7,8 +7,13 @@ import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record CreateSessionRequest(
-        @NotNull(message = "topic_id is required")
-        UUID topicId,
+        //Option A - user selected existing topics from suggestions
+        UUID topicId, // present if user picked a suggestion
+
+        //Option B - user typed new topic name
+        String topicName,
+        UUID parentTopicId,// confirmed parent Id from step 1
+        String parentTopicName, // only used if parent is also new
 
         @NotNull(message = "mode is required")
         String mode,
