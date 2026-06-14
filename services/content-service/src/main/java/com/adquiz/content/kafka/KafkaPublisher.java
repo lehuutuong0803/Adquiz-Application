@@ -24,7 +24,8 @@ public class KafkaPublisher {
             UUID topicId,
             int bloomLevel,
             boolean isCorrect,
-            int confidenceRating
+            int confidenceRating,
+            String targetAudience
     ) {
         AnswerSubmittedEvent event = new AnswerSubmittedEvent(
                 UUID.randomUUID(),
@@ -36,6 +37,7 @@ public class KafkaPublisher {
                 bloomLevel,
                 isCorrect,
                 confidenceRating,
+                targetAudience,
                 LocalDateTime.now()
         );
 

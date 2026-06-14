@@ -1,8 +1,6 @@
 package com.adquiz.content.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 
 import java.util.UUID;
 
@@ -21,6 +19,11 @@ public record CreateSessionRequest(
         @NotNull
         @Min(value = 5, message = "Minimum 5 questions per session")
         @Max(value = 20, message = "Maximum 20 questions per session")
-        Integer totalQuestions
+        Integer totalQuestions,
+
+        @NotBlank(message = "targetAudience is required")
+        @Pattern(regexp = "UNIVERSITY_STUDENT|INTERVIEW_PREP", message = "targetAudience must be UNIVERSITY_STUDENT or" +
+                " INTEVIEW_PREP")
+        String targetAudience
 ) {
 }

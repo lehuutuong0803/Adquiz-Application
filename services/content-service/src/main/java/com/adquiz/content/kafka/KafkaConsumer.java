@@ -31,14 +31,14 @@ public class KafkaConsumer {
 
         log.info("Consumed ANSWER_SUBMITTED event for session {}", event.sessionId());
 
-        Topic topic = topicRepository.findById(event.topicId())
+        Topic topic = topicRepository.findByIdWithParent(event.topicId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Topic not found: " + event.topicId()));
 
         Set<UUID> answeredIds = sessionQuestionRepository.findAnswerdQuestionIds(
                 event.userId(), event.topicId(), (short) event.bloomLevel());
 
-        questionService.topUpIfNeeded(topic, event.bloomLevel(), event.userId(), answeredIds);
+        questionService.topUpIfNeeded(topic, event.bloomLevel(), event.userId(), answeredIds, event.targetAudience());
 
 
     }

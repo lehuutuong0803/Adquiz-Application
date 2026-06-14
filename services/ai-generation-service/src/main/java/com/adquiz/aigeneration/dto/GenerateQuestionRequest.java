@@ -11,16 +11,11 @@ import java.util.UUID;
 
 @Data
 public class GenerateQuestionRequest {
-    // Topic UUID - used to tag generated question with correct topic
-    @NotNull(message = "Topic ID is required")
+
     private UUID topicId;
 
-    // Topic Name - passed to OpenAI so it knows what subject to generate questions about
-    @NotBlank(message = "Topic name is required")
     private String topicName;
 
-    // Parent topic name - gives OpenAI broader context
-    @NotBlank(message = "Parent topic name is required")
     private String parentTopicName;
 
     // Bloom's Taxonomy level 1-6 - tell OpenAI the cognitive difficulty required

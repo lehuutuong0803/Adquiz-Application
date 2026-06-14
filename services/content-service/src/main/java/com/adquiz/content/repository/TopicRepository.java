@@ -38,4 +38,10 @@ public interface TopicRepository extends JpaRepository<Topic, UUID> {
             LIMIT 5
             """, nativeQuery = true)
     List<Topic> findSimilarityParentTopic(@Param("query") String query);
+
+    @Query(value = """
+            SELECT t FROM Topic t
+            LEFT JOIN FETCH t.parent WHERE t.id = :id
+            """)
+    Optional<Topic> findByIdWithParent(@Param("id") UUID id);
 }

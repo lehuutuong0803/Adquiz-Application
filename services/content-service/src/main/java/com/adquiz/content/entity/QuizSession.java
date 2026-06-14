@@ -41,6 +41,9 @@ public class QuizSession {
     @Column(name = "current_difficulty", nullable = false)
     private Short currentDifficulty;
 
+    @Column(name = "target_audience", nullable = true)
+    private String targetAudience;
+
     @Column(name = "started_at", nullable = false, updatable = false)
     private LocalDateTime startedAt;
 

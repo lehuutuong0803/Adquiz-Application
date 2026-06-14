@@ -150,10 +150,11 @@ Use this document for revision and to understand the reasoning behind each decis
 **Where we use it:** `content-service` adaptive algorithm updates `current_difficulty` in `quiz_sessions` after each answer.
 
 **Rules:**
-- 2 consecutive correct answers → difficulty goes up 1 level
-- Wrong answer → difficulty drops 1 level
-- High confidence + 2 correct → difficulty jumps 2 levels
+- Wrong answer → difficulty drops 1 level (floored at 1)
+- 2 consecutive correct answers → difficulty goes up 1 level (capped at 6)
+- 2 consecutive correct answers + High confidence (rating = 3) → difficulty jumps 2 levels (capped at 6)
 - Difficulty scale: Bloom's Taxonomy levels 1-6 (Remember → Understand → Apply → Analyze → Evaluate → Create)
+- "Every 2 consecutive correct" is implemented as `consecutiveCorrect % 2 == 0 && consecutiveCorrect > 0` — this avoids the bug where a naive `>= 2` check would increase difficulty on *every* correct answer once the streak passes 2, not just every 2nd one. See ADR-012 in decisions.md
 
 **Why we use it:** Keeps the student in the optimal learning zone — challenged but not overwhelmed. Backed by educational psychology research.
 

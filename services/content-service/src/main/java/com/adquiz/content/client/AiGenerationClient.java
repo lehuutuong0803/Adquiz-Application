@@ -22,13 +22,14 @@ public class AiGenerationClient {
             String topicName,
             String parentTopicName,
             int bloomLevel,
-            int count
+            int count,
+            String targetAudience
     ) {
         log.info("Requesting {} questions for topic '{}' at bloom level {}",
                 count, topicName, bloomLevel);
         return restClient.post()
                 .uri(properties.getServiceUrl() + "/api/generate/questions")
-                .body(new GenerateRequest(topicName, parentTopicName, bloomLevel, count))
+                .body(new GenerateRequest(topicName, parentTopicName, bloomLevel, count, targetAudience))
                 .retrieve()
                 .body(new org.springframework.core.ParameterizedTypeReference<>() {});
     }

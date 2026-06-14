@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -38,7 +39,7 @@ public class QuestionService {
     }
 
     // Generate questions for all 6 bloom levels in parallel
-    public void generateQuestionsForAllLevels(Topic topic) {
+    public void generateQuestionsForAllLevels(Topic topic, String targetAudience) {
         log.info("Generating questions for all bloom levels for topic '{}'", topic.getName());
         String parentName = topic.getParent() != null ? topic.getParent().getName() : "";
 
@@ -47,7 +48,7 @@ public class QuestionService {
         for (int level = 1; level <= BLOOM_LEVELS; level++) {
             final int bloomLevel = level;
             CompletableFuture<List<Question>> future = CompletableFuture.supplyAsync(
-                    () -> fetchAndMapQuestions(topic, parentName, bloomLevel)
+                    () -> fetchAndMapQuestions(topic, parentName, bloomLevel, targetAudience)
             );
             futures.add(future);
         }
@@ -63,7 +64,7 @@ public class QuestionService {
     }
 
     // Top up a specific bloom level if below threshold
-    public void topUpIfNeeded(Topic topic, int bloomLevel,UUID userId, Set<UUID> answeredIds) {
+    public void topUpIfNeeded(Topic topic, int bloomLevel,UUID userId, Set<UUID> answeredIds, String targetAudience) {
 
         long totalInBank = questionRepository.countByTopicIdAndBloomLevel(topic.getId(), (short) bloomLevel);
 
@@ -74,7 +75,7 @@ public class QuestionService {
                     userId, properties.getQuestionThreshold(), topic.getName(), bloomLevel);
 
             String parentName = topic.getParent() != null ? topic.getParent().getName() : "";
-            List<Question> newQuestions = fetchAndMapQuestions(topic, parentName,bloomLevel);
+            List<Question> newQuestions = fetchAndMapQuestions(topic, parentName,bloomLevel, targetAudience);
             saveAllQuestions(newQuestions);
         }
 
@@ -101,9 +102,9 @@ public class QuestionService {
     }
 
     // Private helper - call AI client and map to entities
-    private List<Question> fetchAndMapQuestions(Topic topic, String parentName, int bloomLevel ) {
+    private List<Question> fetchAndMapQuestions(Topic topic, String parentName, int bloomLevel, String targetAudience ) {
         List<GeneratedQuestionResponse> responses = aiGenerationClient.generateQuestions(
-                topic.getName(), parentName, bloomLevel, QUESTIONS_PER_LEVEL
+                topic.getName(), parentName, bloomLevel, QUESTIONS_PER_LEVEL, targetAudience
         );
 
         return responses.stream()
@@ -122,6 +123,7 @@ public class QuestionService {
                    q.setCorrectAnswer(r.correctAnswer());
                    q.setExplanation(r.explanation());
                    q.setCreatedBy("AI");
+                   q.setCreatedAt(LocalDateTime.now());
                    return q;
                 }).collect(Collectors.toList());
 

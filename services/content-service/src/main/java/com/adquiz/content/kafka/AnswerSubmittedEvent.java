@@ -14,5 +14,6 @@ public record AnswerSubmittedEvent (
         int bloomLevel,
         boolean isCorrect,
         int confidenceRating,
+        String targetAudience,
         LocalDateTime answeredAt
 ){}

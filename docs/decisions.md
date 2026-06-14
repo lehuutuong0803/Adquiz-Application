@@ -123,6 +123,50 @@ Update this file whenever a new architectural decision is made.
 
 ---
 
+## ADR-011 — Fuzzy Topic Matching via pg_trgm
+
+**Decision:** When a student creates a session by typing a topic/subtopic name, use PostgreSQL's `pg_trgm` extension (`similarity(name, :query) > 0.4`) to suggest existing topics instead of creating duplicates.
+
+**Reasoning:**
+- Students will type "Linked List" vs "Linked Lists" vs "linked list" — exact match (`findByNameIgnoreCase`) misses near-duplicates
+- Reusing existing topics means reusing their existing question bank — avoids redundant AI generation
+- Parent topics (`parent_id IS NULL`) and subtopics (`parent_id = :parentId`) are matched separately — a subtopic name match must be scoped to the chosen parent, otherwise the same subtopic name under a different parent would cause ambiguity
+- Considered LLM-based duplicate detection (more powerful, semantic) but rejected for now — too expensive per session creation; `pg_trgm` is fast, free, and good enough for typo/casing variants
+
+**Implementation:** `V7__enable_pg_trgm.sql` enables the extension and adds a GIN trigram index on `topics.name`. `TopicRepository.findSimilarSubtopics` and `findSimilarityParentTopic` (to be renamed `findSimilarParentTopics`) return top-5 matches above the similarity threshold.
+
+---
+
+## ADR-012 — Adaptive Difficulty Requires 2 Consecutive Correct Answers
+
+**Decision:** The adaptive algorithm only increases difficulty after the student answers **2 consecutive questions correctly**, using `consecutiveCorrect % 2 == 0 && consecutiveCorrect > 0` rather than tracking per-difficulty-level counters.
+
+**Reasoning:**
+- A single correct answer isn't strong enough evidence the student has mastered the level — 2 in a row reduces the chance of a lucky guess driving difficulty up
+- A naive "count consecutive correct, increase every time count >= 2" rule over-accelerates: once the streak passes 2, *every subsequent* correct answer would also satisfy `>= 2` and keep bumping difficulty
+- Per-difficulty-level counters (reset the counter whenever the level changes) were considered but rejected as more stateful and harder to reason about
+- The modulo trick (`% 2 == 0`) naturally produces "every 2nd consecutive correct answer" without any extra state beyond the existing consecutive-correct count, and correctly resets the moment a wrong answer breaks the streak (since `countConsecutiveCorrect` walks backward and stops at the first wrong answer)
+
+**Rules (implemented in `AdaptiveAlgorithm.calculateNextDifficulty`):**
+- Wrong answer → `currentDifficulty - 1`, floored at 1 (`Math.max`)
+- 2 consecutive correct + confidence rating = High (3) → `currentDifficulty + 2`, capped at 6 (`Math.min`)
+- 2 consecutive correct (any other confidence) → `currentDifficulty + 1`, capped at 6
+- Otherwise → difficulty unchanged
+
+---
+
+## ADR-013 — Question Bank Top-Up via Kafka Self-Consumption
+
+**Decision:** `content-service` publishes `ANSWER_SUBMITTED` to Kafka and also consumes that same event to check whether the student's remaining unseen questions (for that topic + bloom level) have dropped below `questionThreshold`, triggering AI generation if so.
+
+**Reasoning:**
+- Calling `ai-generation-service` synchronously inside `POST /api/sessions/{id}/answer` would add OpenAI latency directly to the student's response time
+- The "remaining questions" check is per-user (total questions in bank minus questions this user has already answered), not a global bank count — a popular topic could be globally well-stocked but exhausted for one specific student
+- Self-consumption keeps `submitAnswer` itself simple (record answer, calculate difficulty, pick next question, publish event, return) while the top-up logic lives entirely in `KafkaConsumer` + `QuestionService.topUpIfNeeded`
+- `topUpIfNeeded` (not `submitAnswer`) is responsible for deciding *whether* to generate — guarantees that by the time the student submits their *next* answer, questions are available, without ever blocking the current request
+
+---
+
 ## ADR-009 — Tech Stack
 
 **Decision:** The following tech stack was chosen for each service.

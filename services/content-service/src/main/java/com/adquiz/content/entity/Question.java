@@ -48,7 +48,6 @@ public class Question {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Embeddable
     @Getter @Setter @NoArgsConstructor
     public static class OptionDto {
         private String id;

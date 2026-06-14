@@ -13,7 +13,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Topic {
+public class  Topic {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

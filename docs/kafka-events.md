@@ -17,18 +17,16 @@ Published every time a student answers a question.
 
 ```json
 {
-  "event_id"          : "uuid",
-  "event_type"        : "ANSWER_SUBMITTED",
-  "timestamp"         : "2026-06-07T10:30:00Z",
-  "user_id"           : "uuid",
-  "session_id"        : "uuid",
-  "question_id"       : "uuid",
-  "topic_id"          : "uuid",
-  "bloom_level"       : 3,
-  "is_correct"        : true,
-  "confidence_rating" : 2,
-  "answered_at"           : "2026-06-07T10:30:00Z",
-  "remaining_questions"   : 2
+  "eventId"          : "uuid",
+  "eventType"        : "ANSWER_SUBMITTED",
+  "userId"           : "uuid",
+  "sessionId"        : "uuid",
+  "questionId"       : "uuid",
+  "topicId"          : "uuid",
+  "bloomLevel"       : 3,
+  "isCorrect"        : true,
+  "confidenceRating" : 2,
+  "answeredAt"       : "2026-06-07T10:30:00"
 }
 ```
 
@@ -36,17 +34,18 @@ Published every time a student answers a question.
 
 | Field | Type | Description |
 |---|---|---|
-| `event_id` | UUID | Unique event identifier — prevents duplicate processing if Kafka delivers the event twice |
-| `event_type` | String | Always `ANSWER_SUBMITTED` for this event |
-| `timestamp` | ISO 8601 | When the event was published to Kafka |
-| `user_id` | UUID | Student identifier from Keycloak JWT |
-| `session_id` | UUID | Links to the active quiz session |
-| `question_id` | UUID | The question that was answered |
-| `topic_id` | UUID | Subtopic the question belongs to |
-| `bloom_level` | SMALLINT (1-6) | Difficulty level of the question |
-| `is_correct` | Boolean | Whether the student answered correctly |
-| `confidence_rating` | SMALLINT (1-3) | 1=Low, 2=Medium, 3=High |
-| `answered_at` | ISO 8601 | Actual time the student answered — used for streak and daily activity |
+| `eventId` | UUID | Unique event identifier — prevents duplicate processing if Kafka delivers the event twice |
+| `eventType` | String | Always `ANSWER_SUBMITTED` for this event |
+| `userId` | UUID | Student identifier from Keycloak JWT (`sub` claim) |
+| `sessionId` | UUID | Links to the active quiz session — also used as the Kafka message key |
+| `questionId` | UUID | The question that was answered |
+| `topicId` | UUID | Subtopic the question belongs to |
+| `bloomLevel` | int (1-6) | Difficulty level of the question |
+| `isCorrect` | Boolean | Whether the student answered correctly |
+| `confidenceRating` | int (1-3) | 1=Low, 2=Medium, 3=High |
+| `answeredAt` | LocalDateTime | Actual time the student answered — used for streak and daily activity |
+
+**Note:** `remaining_questions` was dropped from the event — `content-service`'s own `KafkaConsumer` recomputes the student's remaining unseen questions itself (via `SessionQuestionRepository`) before deciding whether to top up the question bank. Field names are `camelCase` (Java record field names), not `snake_case`, since `analytics-service` is not yet implemented and no cross-service contract is fixed yet.
 
 ### Updates triggered in analytics-service
 

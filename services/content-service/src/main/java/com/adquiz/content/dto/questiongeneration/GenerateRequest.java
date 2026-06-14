@@ -4,6 +4,7 @@ public record GenerateRequest(
         String topicName,
         String parentTopicName,
         int bloomLevel,
-        int Count
+        int count,
+        String targetAudience
 ) {
 }

@@ -24,6 +24,7 @@ public class QuestionGenerationService {
                 request.getBloomLevel(),
                 request.getTargetAudience());
         String promptText = buildPrompt(request);
+        log.debug("Prompt for generating Questions: " +promptText);
         List<GeneratedQuestionDto> questions = chatClient.prompt()
                 .user(promptText)
                 .call()

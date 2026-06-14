@@ -3,6 +3,8 @@
 All requests (except auth) go through `api-gateway`.
 JWT token required in `Authorization: Bearer <token>` header for all endpoints.
 
+**Naming convention note:** The JSON examples below were drafted in `snake_case` during initial design. The actual `content-service` DTOs are Java records with no Jackson naming-strategy override, so real request/response bodies are `camelCase` (e.g. `sessionId`, `firstQuestion`, `topicId`). The `content-service` Sessions section below has been updated to camelCase to match the real implementation; other sections (Topics, Spaced Repetition, analytics-service, ai-generation-service) still show the original `snake_case` design and should be reconciled with `camelCase` once those parts are implemented.
+
 ---
 
 ## content-service
@@ -48,32 +50,51 @@ Returns all subtopics of a given topic.
 #### `POST /api/sessions`
 Starts a new quiz session.
 
-**Request:**
+**Request — Option A (user picked an existing topic from suggestions):**
 ```json
 {
-  "topic_id"        : "uuid",
-  "mode"            : "ADAPTIVE",
-  "total_questions" : 10
+  "topicId"        : "uuid",
+  "mode"           : "ADAPTIVE",
+  "totalQuestions" : 10
 }
 ```
+
+**Request — Option B (user typed a new topic/subtopic name):**
+```json
+{
+  "topicName"       : "Arrays",
+  "parentTopicId"   : "uuid",
+  "parentTopicName" : "Data Structures",
+  "mode"            : "ADAPTIVE",
+  "totalQuestions"  : 10
+}
+```
+
+**Notes:**
+- `topicId` is provided when the student selected an existing subtopic suggestion — server uses it directly
+- Otherwise `topicName` + (`parentTopicId` or `parentTopicName`) are provided — server resolves/creates the topic via `SessionService.resolveTopic`, using `pg_trgm` fuzzy matching to avoid duplicates (see ADR-011 in decisions.md)
+- `parentTopicId` is used if the parent topic already exists (resolved in an earlier step); `parentTopicName` is used only if the parent is also new
+- `totalQuestions` must be between 5 and 20
+- `mode` is currently always `"ADAPTIVE"` — `RANDOM`/`WEAK_AREAS` modes are not implemented yet
+- If the resolved topic's question bank is empty, the server synchronously generates questions for all 6 Bloom levels (at least 3 each) via `ai-generation-service` before returning the first question
 
 **Response:**
 ```json
 {
-  "session_id"      : "uuid",
-  "status"          : "IN_PROGRESS",
-  "first_question"  : {
-    "id"      : "uuid",
-    "text"    : "What is the time complexity of merge sort?",
-    "options" : [
+  "sessionId"     : "uuid",
+  "status"        : "IN_PROGRESS",
+  "firstQuestion" : {
+    "id"             : "uuid",
+    "text"           : "What is the time complexity of merge sort?",
+    "options"        : [
       { "id": "a", "text": "O(n log n)" },
       { "id": "b", "text": "O(n²)" },
       { "id": "c", "text": "O(n)" },
       { "id": "d", "text": "O(log n)" }
     ],
-    "bloom_level"       : 1,
-    "question_index"    : 1,
-    "total_questions"   : 10
+    "bloomLevel"     : 1,
+    "questionIndex"  : 1,
+    "totalQuestions" : 10
   }
 }
 ```
@@ -87,14 +108,14 @@ Returns the student's session history.
 ```json
 [
   {
-    "session_id"      : "uuid",
-    "topic_id"        : "uuid",
-    "topic_name"      : "Arrays",
-    "mode"            : "ADAPTIVE",
-    "status"          : "COMPLETED",
-    "total_questions" : 10,
-    "started_at"      : "2026-06-07T10:00:00Z",
-    "ended_at"        : "2026-06-07T10:15:00Z"
+    "sessionId"      : "uuid",
+    "topicId"        : "uuid",
+    "topicName"      : "Arrays",
+    "mode"           : "ADAPTIVE",
+    "status"         : "COMPLETED",
+    "totalQuestions" : 10,
+    "startedAt"      : "2026-06-07T10:00:00",
+    "endedAt"        : "2026-06-07T10:15:00"
   }
 ]
 ```
@@ -107,11 +128,11 @@ Returns the current state of a session.
 **Response:**
 ```json
 {
-  "session_id"              : "uuid",
-  "status"                  : "IN_PROGRESS",
-  "current_question_index"  : 4,
-  "total_questions"         : 10,
-  "current_difficulty"      : 3
+  "sessionId"            : "uuid",
+  "status"               : "IN_PROGRESS",
+  "currentQuestionIndex" : 4,
+  "totalQuestions"       : 10,
+  "currentDifficulty"    : 3
 }
 ```
 
@@ -123,55 +144,50 @@ Submits a student's answer to the current question.
 **Request:**
 ```json
 {
-  "question_id"       : "uuid",
-  "selected_option"   : "a",
-  "confidence_rating" : 2
+  "questionId"       : "uuid",
+  "selectedOption"   : "a",
+  "confidenceRating" : 2
 }
 ```
 
 **Response:**
 ```json
 {
-  "is_correct"      : true,
-  "correct_answer"  : "a",
-  "explanation"     : "Merge sort divides the array recursively...",
-  "next_question"   : {
-    "id"            : "uuid",
-    "text"          : "Which data structure uses LIFO ordering?",
-    "options"       : [
+  "isCorrect"     : true,
+  "correctAnswer" : "a",
+  "explanation"   : "Merge sort divides the array recursively...",
+  "nextQuestion"  : {
+    "id"             : "uuid",
+    "text"           : "Which data structure uses LIFO ordering?",
+    "options"        : [
       { "id": "a", "text": "Queue" },
       { "id": "b", "text": "Stack" },
       { "id": "c", "text": "Heap" },
       { "id": "d", "text": "Tree" }
     ],
-    "bloom_level"       : 2,
-    "question_index"    : 5,
-    "total_questions"   : 10
+    "bloomLevel"     : 2,
+    "questionIndex"  : 5,
+    "totalQuestions" : 10
   },
-  "session_status"  : "IN_PROGRESS"
+  "sessionStatus" : "IN_PROGRESS"
 }
 ```
 
 **Notes:**
-- `next_question` is `null` when `session_status = COMPLETED`
+- `nextQuestion` is `null` when `sessionStatus = COMPLETED`
 - Side effects (non-blocking): publishes `ANSWER_SUBMITTED` to Kafka
-- Side effects (non-blocking): content-service consumes its own event, triggers AI generation if remaining questions < 3
+- Side effects (non-blocking): content-service consumes its own event, triggers AI generation if this user's remaining questions for this topic+bloomLevel drop below `questionThreshold`
 
 ---
 
 #### `POST /api/sessions/{id}/complete`
 Ends a session early (student exits before finishing).
 
-**Response:**
-```json
-{
-  "session_id"  : "uuid",
-  "status"      : "ABANDONED"
-}
-```
+**Response:** `204 No Content`
 
 **Notes:**
-- Side effects: publishes `SESSION_COMPLETED` to Kafka with final stats
+- Sets session `status = ABANDONED`
+- `SESSION_COMPLETED` Kafka event not implemented yet — planned for when a session finishes naturally (all questions answered) vs. abandoned early
 
 ---
 

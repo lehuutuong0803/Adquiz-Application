@@ -16,6 +16,7 @@ created_at  | TIMESTAMP
 - `parent_id = <id>` → subtopic (e.g. "Arrays")
 - All foreign keys in other tables point to subtopics only
 - Parent topic is always derivable via join on parent_id
+- `V7__enable_pg_trgm.sql` enables the `pg_trgm` extension and adds a GIN trigram index (`idx_topics_name_trgmm`) on `name`, used by `similarity(name, :query) > 0.4` fuzzy-match queries when resolving a topic typed by the student during session creation
 
 ---
 

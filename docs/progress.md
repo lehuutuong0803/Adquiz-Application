@@ -57,13 +57,18 @@ Update this file at the end of every session.
 - [x] Implement TopicService + TopicController
 - [x] Seed test data (V6__seed_topics.sql)
 - [x] Verified GET /api/topics and GET /api/topics/{id}/subtopics work end to end
-- [ ] Implement question bank (topic + difficulty storage)
-- [ ] Implement quiz session management (create, track, end session)
-- [ ] Implement adaptive difficulty algorithm
-- [ ] Implement spaced repetition (SM-2 algorithm)
-- [ ] Implement Kafka event publishing (answer-submitted)
-- [ ] Integrate with ai-generation-service (REST call when bank is empty)
+- [x] Implement question bank (topic + difficulty storage)
+- [x] Implement fuzzy topic matching (V7__enable_pg_trgm.sql, findSimilarSubtopics / findSimilarityParentTopic)
+- [x] Implement quiz session management (create, track, end session)
+- [x] Implement adaptive difficulty algorithm
+- [x] Implement Kafka event publishing (ANSWER_SUBMITTED) + self-consumption for question bank top-up
+- [x] Integrate with ai-generation-service (REST call when bank is empty, CompletableFuture parallel generation across all 6 Bloom levels)
+- [x] Implement SessionController (all 5 endpoints)
+- [x] Boot content-service + ai-generation-service and verify session flow end to end (create session, submit answer, complete session)
+- [ ] Implement spaced repetition (SM-2 algorithm) + SpacedRepetitionService + ReviewController
+- [ ] Implement SESSION_COMPLETED Kafka event publishing
 - [ ] Write unit tests for adaptive algorithm and SM-2
+- [ ] Rename TopicRepository.findSimilarityParentTopic -> findSimilarParentTopics (naming consistency)
 
 ---
 
@@ -194,5 +199,31 @@ Update this file at the end of every session.
 2. Implement adaptive difficulty algorithm
 3. Implement KafkaPublisher (ANSWER_SUBMITTED, SESSION_COMPLETED events)
 4. Integrate with ai-generation-service (REST call when question bank is low)
+
+---
+
+### Session 4 — [2026-06-14]
+**Discussed:**
+- Designed topic resolution flow for session creation: user types a topic + parent topic name, server uses pg_trgm fuzzy similarity (`similarity() > 0.4`) to suggest existing matches, scoped separately for parent topics (`parent_id IS NULL`) and subtopics (`parent_id = :parentId`) to avoid ambiguity between same-named subtopics under different parents
+- Created `V7__enable_pg_trgm.sql` (enables `pg_trgm` extension + GIN trigram index on `topics.name`)
+- Implemented `AdaptiveAlgorithm` (`@Component`): wrong answer → difficulty -1 (floored at 1); 2 consecutive correct → difficulty +1 (capped at 6); 2 consecutive correct with confidence=High (3) → difficulty +2. The "every 2 consecutive correct" rule uses `consecutiveCorrect % 2 == 0 && consecutiveCorrect > 0` so difficulty doesn't increase on every correct answer after the first jump
+- Implemented `QuestionService`: `isQuestionBankEmpty`, `generateQuestionsForAllLevels` (parallel `CompletableFuture` calls across all 6 Bloom levels, no `@Transactional` to avoid holding a DB connection during the HTTP call to ai-generation-service), `topUpIfNeeded` (per-user remaining-question check against `questionThreshold`), `pickNextQuestion` (excludes answered question ids), `saveAllQuestions` (`@Transactional`)
+- Implemented `AiGenerationClient` + `RestClientConfig` (separate `@Configuration` for the `RestClient` bean, `AIGenerationProperties` for `serviceUrl`/`questionThreshold`)
+- Implemented Kafka flow: `KafkaPublisher.publishAnswerSubmitted` (topic `quiz-events`, keyed by `sessionId`), `KafkaConsumer` listens on `quiz-events`, filters `eventType == "ANSWER_SUBMITTED"`, queries answered question ids itself via `SessionQuestionRepository.findAnswerdQuestionIds`, calls `questionService.topUpIfNeeded` — keeps the answer endpoint non-blocking (self-consumption pattern)
+- `AnswerSubmittedEvent` final shape: `eventId, eventType, userId, sessionId, questionId, topicId, bloomLevel, isCorrect, confidenceRating, answeredAt` (no `remaining_questions` field — consumer recomputes this itself)
+- Implemented `SessionService`: `createSession` (resolves topic via `resolveTopic`, generates questions for all levels if bank empty, creates `QuizSession` with `currentDifficulty = 1`, picks + persists first `SessionQuestion`), `submitAnswer` (validates `IN_PROGRESS` status, records answer, counts consecutive correct via simple backward walk, calls `AdaptiveAlgorithm`, completes session on last question or picks next question excluding session-wide answered ids, publishes `ANSWER_SUBMITTED` with the real `question.getId()`), `abandonSession`, `getSessionHistory`, `getSessionState`
+- `extractUserId(Authentication auth)` casts to `JwtAuthenticationToken` and reads `jwt.getSubject()` (the `sub` claim, a UUID) — not `auth.getName()`, which returns the username string
+- Implemented `SessionController` — `POST /api/sessions`, `GET /api/sessions`, `GET /api/sessions/{id}`, `POST /api/sessions/{id}/answer`, `POST /api/sessions/{id}/complete`
+- Fixed `ai-generation-service/pom.xml` — same Lombok annotation-processor issue as content-service earlier (missing `maven-compiler-plugin` + `annotationProcessorPaths` for `lombok`), which caused `@Data`/`@Slf4j`-generated methods to not compile
+- Booted both `content-service` (port 8081) and `ai-generation-service` (port 8083) successfully against the existing Docker infrastructure (Postgres, Kafka, Zookeeper, Keycloak)
+
+**Stopped at:** Both services running, fresh JWT token obtained, about to test the full session flow end to end (create session → submit answer → check state → complete session)
+
+**Next session should:**
+1. Test session flow end to end (create session, submit answer with `topUpIfNeeded` triggering AI generation, get session state, complete session)
+2. Implement `SpacedRepetitionService` (SM-2 algorithm) + `ReviewController` (`GET /api/reviews/due`, `POST /api/reviews/{topicId}/rate`)
+3. Implement `SESSION_COMPLETED` Kafka event publishing
+4. Write unit tests for `AdaptiveAlgorithm` and SM-2
+5. Rename `TopicRepository.findSimilarityParentTopic` → `findSimilarParentTopics`
 
 ---

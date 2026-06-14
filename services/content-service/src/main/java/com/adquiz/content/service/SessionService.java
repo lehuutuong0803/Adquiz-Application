@@ -46,7 +46,7 @@ public class SessionService {
 
         if (questionService.isQuestionBankEmpty(topic.getId())) {
             log.info("Question Bank empty for topic: '{}'", topic.getName());
-            questionService.generateQuestionsForAllLevels(topic);
+            questionService.generateQuestionsForAllLevels(topic, request.targetAudience());
         }
 
         QuizSession quizSession = new QuizSession();
@@ -54,6 +54,7 @@ public class SessionService {
         quizSession.setTopic(topic);
         quizSession.setMode(request.mode());
         quizSession.setStatus("IN_PROGRESS");
+        quizSession.setTargetAudience(request.targetAudience());
         quizSession.setTotalQuestions(request.totalQuestions().shortValue());
         quizSession.setCurrentQuestionIndex((short) 1);
         quizSession.setCurrentDifficulty((short) 1);
@@ -150,7 +151,7 @@ public class SessionService {
 
         kafkaPublisher.publishAnswerSubmitted(
                 userId, session.getId(), question.getId(),session.getTopic().getId(), newDifficulty, isCorrect,
-                request.confidenceRating());
+                request.confidenceRating(), session.getTargetAudience());
 
         return new AnswerResponse(
                 isCorrect,
