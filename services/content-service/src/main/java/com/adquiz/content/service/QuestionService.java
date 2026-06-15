@@ -4,6 +4,7 @@ import com.adquiz.content.client.AiGenerationClient;
 import com.adquiz.content.config.AIGenerationProperties;
 import com.adquiz.content.dto.questiongeneration.GeneratedQuestionResponse;
 import com.adquiz.content.entity.Question;
+import com.adquiz.content.entity.SessionQuestion;
 import com.adquiz.content.entity.Topic;
 import com.adquiz.content.repository.QuestionRepository;
 import com.adquiz.content.repository.SessionQuestionRepository;
@@ -12,11 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -92,6 +92,36 @@ public class QuestionService {
                 .orElseThrow(() -> new RuntimeException(
                         "No available questions for topic " + topicId + " at level " + bloomLevel
                 ));
+    }
+
+    // Pick a question for a REVIEW session, weighted toward weak areas
+    public Question pickReviewQuestion(UUID userId, UUID topicId, Set<UUID> excludedIds) {
+        List<SessionQuestion> answered = sessionQuestionRepository.findAnsweredByUserAndTopic(userId, topicId);
+
+        Map<UUID, SessionQuestion> lastestAttemps = answered.stream()
+                .collect(Collectors.toMap(
+                        sq -> sq.getQuestion().getId(),
+                        sq -> sq,
+                        (a, b) -> a.getAnsweredAt().isAfter(b.getAnsweredAt()) ? a : b
+                ));
+
+        return lastestAttemps.values().stream()
+                .filter(sq -> !excludedIds.contains(sq.getQuestion().getId()))
+                .max(Comparator.comparingInt(this::weaknessScore))
+                .map(SessionQuestion::getQuestion)
+                .orElseThrow(() -> new RuntimeException(
+                        "No available review question for topic: " + topicId));
+
+    }
+
+    private int weaknessScore(SessionQuestion sq) {
+        int correctnessScore = Boolean.TRUE.equals(sq.getIsCorrect()) ? 1 : 10;
+        int confidenceScore = (4 - sq.getConfidenceRating()) * 2;
+
+        long daysSinceAnswered = ChronoUnit.DAYS.between(sq.getAnsweredAt().toLocalDate(), LocalDate.now());
+        int recencyScore = (int) Math.min(daysSinceAnswered, 14);
+
+        return correctnessScore + confidenceScore + recencyScore;
     }
 
     // @Transactional only wraps the DB write - short and fast

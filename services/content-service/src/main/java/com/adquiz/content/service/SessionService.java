@@ -30,6 +30,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SessionService {
 
+    private static final String MODE_REVIEW = "REVIEW";
+    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String STATUS_ABANDONED = "ABANDONED";
+
     private final QuizSessionRepository quizSessionRepository;
     private final SessionQuestionRepository sessionQuestionRepository;
     private final TopicRepository topicRepository;
@@ -37,32 +42,40 @@ public class SessionService {
     private final AdaptiveAlgorithm adaptiveAlgorithm;
     private final QuizSessionMapper quizSessionMapper;
     private final KafkaPublisher kafkaPublisher;
+    private final SpacedRepetitionService spacedRepetitionService;
 
     @Transactional
     public SessionResponse createSession(CreateSessionRequest request, Authentication auth) {
         UUID userId = extractUserId(auth);
 
         Topic topic = resolveTopic(request);
+        boolean isReview = MODE_REVIEW.equals(request.mode());
 
-        if (questionService.isQuestionBankEmpty(topic.getId())) {
-            log.info("Question Bank empty for topic: '{}'", topic.getName());
-            questionService.generateQuestionsForAllLevels(topic, request.targetAudience());
+        Question firstQuestion;
+        if (isReview) {
+            firstQuestion = questionService.pickReviewQuestion(userId, topic.getId(), Set.of());
+        } else {
+            if (questionService.isQuestionBankEmpty(topic.getId())) {
+                log.info("Question Bank empty for topic: '{}'", topic.getName());
+                questionService.generateQuestionsForAllLevels(topic, request.targetAudience());
+            }
+            Set<UUID> answerIds = sessionQuestionRepository.findAnsweredQuestionIds(userId, topic.getId(), (short) 1);
+            firstQuestion = questionService.pickNextQuestion(topic.getId(), 1, answerIds);
         }
+
 
         QuizSession quizSession = new QuizSession();
         quizSession.setUserId(userId);
         quizSession.setTopic(topic);
         quizSession.setMode(request.mode());
-        quizSession.setStatus("IN_PROGRESS");
+        quizSession.setStatus(STATUS_IN_PROGRESS);
         quizSession.setTargetAudience(request.targetAudience());
         quizSession.setTotalQuestions(request.totalQuestions().shortValue());
         quizSession.setCurrentQuestionIndex((short) 1);
-        quizSession.setCurrentDifficulty((short) 1);
+        quizSession.setCurrentDifficulty(firstQuestion.getBloomLevel());
         quizSession.setStartedAt(LocalDateTime.now());
         quizSessionRepository.save(quizSession);
 
-        Question firstQuestion = questionService.pickNextQuestion(
-                topic.getId(), 1, Set.of());
 
         SessionQuestion sessionQuestion = new SessionQuestion();
         sessionQuestion.setSession(quizSession);
@@ -87,7 +100,7 @@ public class SessionService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Session not found: "+ sessionId));
 
-        if (!session.getStatus().equals("IN_PROGRESS")) {
+        if (!session.getStatus().equals(STATUS_IN_PROGRESS)) {
             throw new IllegalStateException("Session is not in progress");
         }
 
@@ -116,32 +129,56 @@ public class SessionService {
 
         // finish the session
         if (isLastQuestion) {
-            session.setStatus("COMPLETED");
+            session.setStatus(STATUS_COMPLETED);
             session.setEndedAt(LocalDateTime.now());
             quizSessionRepository.save(session);
+
+            int correctAnswer = (int) sessionQuestionRepository.findBySessionIdOrderByQuestionIndex(sessionId)
+                    .stream()
+                    .filter(q -> Boolean.TRUE.equals(q.getIsCorrect()))
+                    .count();
+
+            double finalAccuracy = (double) correctAnswer / session.getTotalQuestions();
+            spacedRepetitionService.recordSessionCompletion(userId, session.getTopic(), finalAccuracy);
+
+            kafkaPublisher.publishSessionCompleted(
+                    userId,
+                    session.getId(),
+                    session.getTopic().getId(),
+                    session.getTotalQuestions(),
+                    correctAnswer
+            );
 
             return new AnswerResponse(
               isCorrect,
               question.getCorrectAnswer(),
               question.getExplanation(),
               null,
-              "COMPLETED"
+              STATUS_COMPLETED
             );
         }
 
         // continue the session
-        session.setCurrentDifficulty((short) newDifficulty);
-        session.setCurrentQuestionIndex((short) (session.getCurrentQuestionIndex() +1));
+        boolean isReview = MODE_REVIEW.equals(session.getMode());
+        Question nextQuestion;
+        if (isReview) {
+            Set<UUID> sessionAnsweredIds = sessionQuestionRepository
+                    .findBySessionIdOrderByQuestionIndex(sessionId)
+                    .stream()
+                    .map(sq -> sq.getQuestion().getId())
+                    .collect(Collectors.toSet());
+            nextQuestion = questionService.pickReviewQuestion(userId, session.getTopic().getId(), sessionAnsweredIds);
+
+        } else {
+            Set<UUID> answeredIds = sessionQuestionRepository
+                    .findAnsweredQuestionIds(userId, session.getTopic().getId(), (short) newDifficulty);
+            nextQuestion = questionService.pickNextQuestion(
+                    session.getTopic().getId(), newDifficulty, answeredIds);
+        }
+
+        session.setCurrentDifficulty(nextQuestion.getBloomLevel());
+        session.setCurrentQuestionIndex((short) (session.getCurrentQuestionIndex() + 1));
         quizSessionRepository.save(session);
-
-        Set<UUID> answeredIds = sessionQuestionRepository
-                .findBySessionIdOrderByQuestionIndex(sessionId)
-                .stream()
-                .map(sq -> sq.getQuestion().getId())
-                .collect(Collectors.toSet());
-
-        Question nextQuestion = questionService.pickNextQuestion(
-                session.getTopic().getId(), newDifficulty, answeredIds);
 
         SessionQuestion nextSessionQuestion = new SessionQuestion();
         nextSessionQuestion.setSession(session);
@@ -150,8 +187,8 @@ public class SessionService {
         sessionQuestionRepository.save(nextSessionQuestion);
 
         kafkaPublisher.publishAnswerSubmitted(
-                userId, session.getId(), question.getId(),session.getTopic().getId(), newDifficulty, isCorrect,
-                request.confidenceRating(), session.getTargetAudience());
+                userId, session.getId(), question.getId(),session.getTopic().getId(), session.getCurrentDifficulty(),
+                isCorrect, request.confidenceRating(), session.getTargetAudience());
 
         return new AnswerResponse(
                 isCorrect,
@@ -160,7 +197,7 @@ public class SessionService {
                 buildQuestionDto(nextQuestion,
                         session.getCurrentQuestionIndex(),
                         (int) session.getTotalQuestions()),
-                "IN_PROGRESS"
+                STATUS_IN_PROGRESS
         );
 
     }
@@ -172,7 +209,7 @@ public class SessionService {
         QuizSession session = quizSessionRepository.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Session not found: "+ sessionId));
-        session.setStatus("ABANDONED");
+        session.setStatus(STATUS_ABANDONED);
         session.setEndedAt(LocalDateTime.now());
         quizSessionRepository.save(session);
     }

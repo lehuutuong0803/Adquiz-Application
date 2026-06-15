@@ -44,4 +44,23 @@ public class KafkaPublisher {
         kafkaTemplate.send(TOPIC, sessionId.toString(), event);
         log.info("Published ANSWER_SUBMITTED event for session {}", sessionId);
     }
+
+    public void publishSessionCompleted(UUID userId, UUID sessionId, UUID topicId,
+                                        int totalQuestions, int correctAnswers) {
+        double finalAccuracy = totalQuestions == 0 ? 0.0 : (double) correctAnswers / totalQuestions;
+
+        SessionCompletedEvent event = new SessionCompletedEvent(
+                UUID.randomUUID(),
+                "SESSION_COMPLETED",
+                userId,
+                sessionId,
+                topicId,
+                totalQuestions,
+                correctAnswers,
+                finalAccuracy,
+                LocalDateTime.now());
+
+        kafkaTemplate.send(TOPIC, sessionId.toString(), event);
+        log.info("Published SESSION_COMPLETED event for session {}", sessionId);
+    }
 }

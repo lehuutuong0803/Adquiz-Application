@@ -14,10 +14,11 @@ public record CreateSessionRequest(
         String parentTopicName, // only used if parent is also new
 
         @NotNull(message = "mode is required")
+        @Pattern(regexp = "ADAPTIVE|REVIEW", message = "mode must be ADAPTIVE or REVIEW")
         String mode,
 
         @NotNull
-        @Min(value = 5, message = "Minimum 5 questions per session")
+        @Min(value = 2, message = "Minimum 5 questions per session")
         @Max(value = 20, message = "Maximum 20 questions per session")
         Integer totalQuestions,
 

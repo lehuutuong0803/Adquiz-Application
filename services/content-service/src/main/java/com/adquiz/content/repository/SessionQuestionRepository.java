@@ -22,8 +22,19 @@ public interface SessionQuestionRepository extends JpaRepository<SessionQuestion
         AND sq.session.topic.id = :topicId
         AND sq.question.bloomLevel = :bloomLevel
         """)
-    Set<UUID> findAnswerdQuestionIds(
+    Set<UUID> findAnsweredQuestionIds(
             @Param("userId") UUID userId,
             @Param("topicId") UUID topicId,
             @Param("bloomLevel") Short bloomLevel);
+
+    @Query("""
+          SELECT sq FROM SessionQuestion sq
+          JOIN FETCH sq.question
+          WHERE sq.session.userId = :userId
+          AND sq.session.topic.id = :topicId
+          AND sq.isCorrect IS NOT NULL  
+          """)
+    List<SessionQuestion> findAnsweredByUserAndTopic(
+            @Param("userId") UUID userId,
+            @Param("topicId") UUID topicId);
 }

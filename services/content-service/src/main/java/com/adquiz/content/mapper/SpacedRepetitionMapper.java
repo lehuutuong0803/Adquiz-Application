@@ -1,7 +1,6 @@
 package com.adquiz.content.mapper;
 
 import com.adquiz.content.dto.DueReviewDto;
-import com.adquiz.content.dto.RateReviewResponse;
 import com.adquiz.content.entity.SpacedRepetitionRecord;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,6 +13,4 @@ public interface SpacedRepetitionMapper {
     @Mapping(target = "parentTopicName", source = "topic.parent.name")
     DueReviewDto toDueReviewDto(SpacedRepetitionRecord record);
 
-    @Mapping(target = "topicId", source = "topic.id")
-    RateReviewResponse toRateReviewResponse(SpacedRepetitionRecord record);
 }

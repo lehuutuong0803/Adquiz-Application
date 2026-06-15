@@ -37,7 +37,7 @@ public interface TopicRepository extends JpaRepository<Topic, UUID> {
             ORDER BY similarity(name, :query) DESC
             LIMIT 5
             """, nativeQuery = true)
-    List<Topic> findSimilarityParentTopic(@Param("query") String query);
+    List<Topic> findSimilarParentTopics(@Param("query") String query);
 
     @Query(value = """
             SELECT t FROM Topic t

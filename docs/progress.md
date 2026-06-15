@@ -66,9 +66,10 @@ Update this file at the end of every session.
 - [x] Implement SessionController (all 5 endpoints)
 - [x] Boot content-service + ai-generation-service and verify session flow end to end (create session, submit answer, complete session)
 - [ ] Implement spaced repetition (SM-2 algorithm) + SpacedRepetitionService + ReviewController
-- [ ] Implement SESSION_COMPLETED Kafka event publishing
-- [ ] Write unit tests for adaptive algorithm and SM-2
-- [ ] Rename TopicRepository.findSimilarityParentTopic -> findSimilarParentTopics (naming consistency)
+- [x] Implement SESSION_COMPLETED Kafka event publishing
+- [ ] Write unit tests for adaptive algorithm and SM-2 (deferred to a dedicated testing pass once the application is feature-complete)
+- [x] Rename TopicRepository.findSimilarityParentTopic -> findSimilarParentTopics (naming consistency)
+- [ ] Refactor QuizSession.mode/status (and CreateSessionRequest.mode) from String to Java enums for type safety (deferred cleanup; String constants used for now)
 
 ---
 
