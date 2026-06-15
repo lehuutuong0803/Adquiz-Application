@@ -1,12 +1,12 @@
 package com.adquiz.content.kafka;
 
+import com.adquiz.content.entity.Topic;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -21,7 +21,7 @@ public class KafkaPublisher {
             UUID userId,
             UUID sessionId,
             UUID questionId,
-            UUID topicId,
+            Topic topic,
             int bloomLevel,
             boolean isCorrect,
             int confidenceRating,
@@ -33,7 +33,9 @@ public class KafkaPublisher {
                 userId,
                 sessionId,
                 questionId,
-                topicId,
+                topic.getId(),
+                topic.getName(),
+                topic.getParent() != null ? topic.getParent().getName() : null,
                 bloomLevel,
                 isCorrect,
                 confidenceRating,
@@ -45,7 +47,7 @@ public class KafkaPublisher {
         log.info("Published ANSWER_SUBMITTED event for session {}", sessionId);
     }
 
-    public void publishSessionCompleted(UUID userId, UUID sessionId, UUID topicId,
+    public void publishSessionCompleted(UUID userId, UUID sessionId, Topic topic,
                                         int totalQuestions, int correctAnswers) {
         double finalAccuracy = totalQuestions == 0 ? 0.0 : (double) correctAnswers / totalQuestions;
 
@@ -54,7 +56,9 @@ public class KafkaPublisher {
                 "SESSION_COMPLETED",
                 userId,
                 sessionId,
-                topicId,
+                topic.getId(),
+                topic.getName(),
+                topic.getParent() != null ? topic.getParent().getName() : null,
                 totalQuestions,
                 correctAnswers,
                 finalAccuracy,

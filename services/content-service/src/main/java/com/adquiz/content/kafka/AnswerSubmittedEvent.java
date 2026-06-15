@@ -11,6 +11,8 @@ public record AnswerSubmittedEvent (
         UUID sessionId,
         UUID questionId,
         UUID topicId,
+        String topicName,
+        String parentTopicName,
         int bloomLevel,
         boolean isCorrect,
         int confidenceRating,

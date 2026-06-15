@@ -65,7 +65,7 @@ Update this file at the end of every session.
 - [x] Integrate with ai-generation-service (REST call when bank is empty, CompletableFuture parallel generation across all 6 Bloom levels)
 - [x] Implement SessionController (all 5 endpoints)
 - [x] Boot content-service + ai-generation-service and verify session flow end to end (create session, submit answer, complete session)
-- [ ] Implement spaced repetition (SM-2 algorithm) + SpacedRepetitionService + ReviewController
+- [x] Implement spaced repetition (SM-2 algorithm) + SpacedRepetitionService + ReviewController
 - [x] Implement SESSION_COMPLETED Kafka event publishing
 - [ ] Write unit tests for adaptive algorithm and SM-2 (deferred to a dedicated testing pass once the application is feature-complete)
 - [x] Rename TopicRepository.findSimilarityParentTopic -> findSimilarParentTopics (naming consistency)
@@ -226,5 +226,42 @@ Update this file at the end of every session.
 3. Implement `SESSION_COMPLETED` Kafka event publishing
 4. Write unit tests for `AdaptiveAlgorithm` and SM-2
 5. Rename `TopicRepository.findSimilarityParentTopic` → `findSimilarParentTopics`
+
+---
+
+### Session 5 — [2026-06-15]
+**Discussed:**
+- Verified session flow end to end (create session, submit answer, complete session) — confirmed working
+- Fixed Kafka `MessageConversionException`: refactored `KafkaConsumer` from a single-typed `@KafkaListener` method to a class-level `@KafkaListener` + per-type `@KafkaHandler` methods (`consumeAnswerSubmitted(AnswerSubmittedEvent)`, `consumeSessionCompleted(SessionCompletedEvent)`) — Spring now dispatches by deserialized type via the `__TypeId__` header
+- Implemented `SESSION_COMPLETED` Kafka event: `SessionCompletedEvent` record + `KafkaPublisher.publishSessionCompleted` (computes `finalAccuracy`), published from `SessionService.submitAnswer` when the last question is answered
+- Renamed `TopicRepository.findSimilarityParentTopic` → `findSimilarParentTopics`
+- Designed and implemented review-session flow:
+  - Added `CreateSessionRequest.mode` validation: `@Pattern(regexp = "ADAPTIVE|REVIEW")`
+  - Aligned exclusion logic for new (`ADAPTIVE`) sessions — both `createSession` and `submitAnswer` now exclude all-time answered question ids per (user, topic, bloomLevel) via `findAnsweredQuestionIds`, so repeat sessions surface fresh questions instead of repeating ones from earlier sessions
+  - Added `SessionQuestionRepository.findAnsweredByUserAndTopic` (all-time answered questions for a user+topic, with `JOIN FETCH sq.question`)
+  - Implemented `QuestionService.pickReviewQuestion(userId, topicId, excludedIds)` + `weaknessScore(SessionQuestion)`: deterministically picks the highest-weakness previously-answered question, excluding ids already used this session. Weakness score = `(isCorrect ? 1 : 10) + (4 - confidenceRating) * 2 + min(daysSinceLastAnswered, 14)` — correctness dominates, confidence and recency are secondary factors, recency capped at 14 days
+  - `SessionService.createSession`/`submitAnswer` branch on `mode == REVIEW` to call `pickReviewQuestion` instead of `pickNextQuestion`, and set `currentDifficulty` from the picked question's `bloomLevel`
+- Added string constants to `SessionService` for `mode`/`status` values (`MODE_REVIEW`, `STATUS_IN_PROGRESS`, `STATUS_COMPLETED`, `STATUS_ABANDONED`) — replaced hardcoded literals throughout
+- Designed and implemented SM-2 spaced repetition:
+  - `SpacedRepetitionRecordRepository.findDueForReview(userId, date)` — `JOIN FETCH r.topic t LEFT JOIN FETCH t.parent WHERE r.nextReviewDate <= :date`
+  - `SpacedRepetitionService.recordSessionCompletion(userId, topic, finalAccuracy)` — maps accuracy to SM-2 quality (`>=0.9→5, >=0.7→4, >=0.4→3, else 0`), applies SM-2 (`applySm2`): quality<3 resets `repetitions=0, intervalDays=1`; quality>=3 grows interval (`1 → 6 → round(prevInterval * easeFactor)`), capped at `MAX_INTERVAL_DAYS = 180` to prevent unbounded/overflow growth from an ever-increasing `easeFactor`; updates `easeFactor` (floor 1.3, no ceiling) using the standard SM-2 formula, rounded to 2 decimals via `BigDecimal.setScale(2, HALF_UP)`
+  - `SpacedRepetitionService.getDueReviews(userId)` — maps due records to `DueReviewDto`
+  - `recordSessionCompletion` is called from `SessionService.submitAnswer` when the last question is answered, before publishing `SESSION_COMPLETED`
+  - Created `ReviewController` — `GET /api/reviews/due`
+  - Removed dead `/rate` endpoint code: `RateReviewRequest`, `RateReviewResponse`, `SpacedRepetitionMapper.toRateReviewResponse`
+- Updated `docs/api-contracts.md`: documented `mode = ADAPTIVE | REVIEW` in session creation, SM-2 side effects on session completion, removed `/rate` endpoint, updated `/api/reviews/due` response to camelCase
+
+- Verified the full SM-2 + review-session flow end to end against the running `content-service`:
+  - Created an `ADAPTIVE` session (topic "Linked Lists", 5 questions), answered all correctly with high confidence — confirmed adaptive difficulty `+1`/`+2` jump rules (bloomLevel progression `1 → 1 → 3 → 3 → 5`)
+  - Last answer triggered `SESSION_COMPLETED` (published + consumed cleanly, no `MessageConversionException`) and created a new `SpacedRepetitionRecord` (`easeFactor 2.50 → 2.60`, `repetitions = 1`, `intervalDays = 1`, `nextReviewDate = +1 day`)
+  - `GET /api/reviews/due` returned the topic correctly (after temporarily backdating `nextReviewDate` for the test, since a fresh record is never due same-day)
+  - Created a `REVIEW` session for the same topic (3 questions) — `pickReviewQuestion` correctly selected only previously-answered questions, and `excludedIds` prevented repeats within the session
+  - Completing the review session triggered a **second** SM-2 update: `repetitions 1 → 2`, `intervalDays` jumped to the hardcoded `6`, `easeFactor 2.60 → 2.70`, `nextReviewDate = +6 days`
+
+**Stopped at:** SM-2 + review-session feature fully implemented and verified end to end. Phase 4 (Content Service) is functionally complete aside from deferred items (unit tests, enum refactor).
+
+**Next session should:**
+1. Decide next focus: set up `api-gateway` (Phase 2 remaining item), start Phase 5 (analytics-service), or start Phase 6 (React frontend)
+2. Backlog carried forward: unit tests for `AdaptiveAlgorithm` and SM-2 (deferred); refactor `mode`/`status` from String constants to Java enums (deferred)
 
 ---

@@ -9,9 +9,11 @@ public record SessionCompletedEvent (
         UUID userId,
         UUID sessionId,
         UUID topicId,
+        String topicName,
+        String parentTopicName,
         int totalQuestions,
         int correctAnswers,
         double finalAccuracy,
-        LocalDateTime completeAt
+        LocalDateTime completedAt
 ){
 }

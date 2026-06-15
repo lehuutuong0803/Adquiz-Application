@@ -3,7 +3,7 @@
 All requests (except auth) go through `api-gateway`.
 JWT token required in `Authorization: Bearer <token>` header for all endpoints.
 
-**Naming convention note:** The JSON examples below were drafted in `snake_case` during initial design. The actual `content-service` DTOs are Java records with no Jackson naming-strategy override, so real request/response bodies are `camelCase` (e.g. `sessionId`, `firstQuestion`, `topicId`). The `content-service` Sessions section below has been updated to camelCase to match the real implementation; other sections (Topics, Spaced Repetition, analytics-service, ai-generation-service) still show the original `snake_case` design and should be reconciled with `camelCase` once those parts are implemented.
+**Naming convention note:** The JSON examples below were drafted in `snake_case` during initial design. The actual `content-service` DTOs are Java records with no Jackson naming-strategy override, so real request/response bodies are `camelCase` (e.g. `sessionId`, `firstQuestion`, `topicId`). The `content-service` Sessions and Spaced Repetition sections below have been updated to camelCase to match the real implementation; other sections (Topics, analytics-service, ai-generation-service) still show the original `snake_case` design and should be reconciled with `camelCase` once those parts are implemented.
 
 ---
 
@@ -75,8 +75,9 @@ Starts a new quiz session.
 - Otherwise `topicName` + (`parentTopicId` or `parentTopicName`) are provided — server resolves/creates the topic via `SessionService.resolveTopic`, using `pg_trgm` fuzzy matching to avoid duplicates (see ADR-011 in decisions.md)
 - `parentTopicId` is used if the parent topic already exists (resolved in an earlier step); `parentTopicName` is used only if the parent is also new
 - `totalQuestions` must be between 5 and 20
-- `mode` is currently always `"ADAPTIVE"` — `RANDOM`/`WEAK_AREAS` modes are not implemented yet
-- If the resolved topic's question bank is empty, the server synchronously generates questions for all 6 Bloom levels (at least 3 each) via `ai-generation-service` before returning the first question
+- `mode` is `"ADAPTIVE"` or `"REVIEW"`:
+  - `ADAPTIVE` — normal quiz flow. If the resolved topic's question bank is empty, the server synchronously generates questions for all 6 Bloom levels (at least 3 each) via `ai-generation-service` before returning the first question. Question selection excludes questions the student has already answered for that topic + Bloom level (`SessionQuestionRepository.findAnsweredQuestionIds`), so repeat sessions surface fresh questions.
+  - `REVIEW` — picks from questions the student has **previously answered** for this topic, prioritized by a weakness score (`QuestionService.pickReviewQuestion`/`weaknessScore`) combining correctness, confidence rating, and recency. Used for spaced-repetition review sessions (see Spaced Repetition section below). Returns an error if the student has no answered questions yet for this topic.
 
 **Response:**
 ```json
@@ -177,6 +178,10 @@ Submits a student's answer to the current question.
 - `nextQuestion` is `null` when `sessionStatus = COMPLETED`
 - Side effects (non-blocking): publishes `ANSWER_SUBMITTED` to Kafka
 - Side effects (non-blocking): content-service consumes its own event, triggers AI generation if this user's remaining questions for this topic+bloomLevel drop below `questionThreshold`
+- When this answer is the **last question** (`sessionStatus = COMPLETED`):
+  - Session `status` is set to `COMPLETED` and `endedAt` is recorded
+  - `SpacedRepetitionService.recordSessionCompletion` runs synchronously — maps the session's final accuracy to an SM-2 quality score and updates (or creates) the `SpacedRepetitionRecord` for this (user, topic), recalculating `easeFactor`, `intervalDays`, and `nextReviewDate`
+  - Publishes `SESSION_COMPLETED` to Kafka (`eventId, eventType, userId, sessionId, topicId, totalQuestions, correctAnswers, finalAccuracy, completedAt`)
 
 ---
 
@@ -187,48 +192,32 @@ Ends a session early (student exits before finishing).
 
 **Notes:**
 - Sets session `status = ABANDONED`
-- `SESSION_COMPLETED` Kafka event not implemented yet — planned for when a session finishes naturally (all questions answered) vs. abandoned early
+- Does **not** trigger SM-2 update or publish `SESSION_COMPLETED` — those only happen when a session finishes naturally (all questions answered, see `POST /api/sessions/{id}/answer` above)
 
 ---
 
 ### Spaced Repetition
 
+The content-service implements the SM-2 spaced-repetition algorithm (`SpacedRepetitionService`). Each (user, topic) pair has a `SpacedRepetitionRecord` tracking `easeFactor`, `repetitions`, `intervalDays`, `lastReviewDate`, and `nextReviewDate`.
+
+- The record is created/updated automatically whenever a session **finishes naturally** (see `POST /api/sessions/{id}/answer` above) — there is no separate "rate" step.
+- `intervalDays` is capped at `MAX_INTERVAL_DAYS = 180` to avoid runaway growth from an ever-increasing `easeFactor`.
+- To actually review a due topic, the student starts a new session with `mode = "REVIEW"` for that `topicId` (see Sessions section above) — this surfaces previously-answered questions ranked by a weakness score instead of new questions.
+
 #### `GET /api/reviews/due`
-Returns subtopics due for review today.
+Returns topics due for review today (`nextReviewDate <= today`).
 
 **Response:**
 ```json
 [
   {
-    "topic_id"          : "uuid",
-    "topic_name"        : "Arrays",
-    "parent_topic_name" : "Data Structures",
-    "last_review_date"  : "2026-06-04",
-    "interval_days"     : 3
+    "topicId"          : "uuid",
+    "topicName"        : "Arrays",
+    "parentTopicName"  : "Data Structures",
+    "lastReviewDate"   : "2026-06-04",
+    "intervalDays"     : 3
   }
 ]
-```
-
----
-
-#### `POST /api/reviews/{topicId}/rate`
-Submits the student's recall rating after a review session.
-
-**Request:**
-```json
-{
-  "rating": "GOT_IT"
-}
-```
-**Rating values:** `FORGOT` | `HARD` | `GOT_IT` | `EASY`
-
-**Response:**
-```json
-{
-  "topic_id"          : "uuid",
-  "next_review_date"  : "2026-06-14",
-  "interval_days"     : 7
-}
 ```
 
 ---

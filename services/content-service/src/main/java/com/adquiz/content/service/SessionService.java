@@ -144,7 +144,7 @@ public class SessionService {
             kafkaPublisher.publishSessionCompleted(
                     userId,
                     session.getId(),
-                    session.getTopic().getId(),
+                    session.getTopic(),
                     session.getTotalQuestions(),
                     correctAnswer
             );
@@ -187,7 +187,7 @@ public class SessionService {
         sessionQuestionRepository.save(nextSessionQuestion);
 
         kafkaPublisher.publishAnswerSubmitted(
-                userId, session.getId(), question.getId(),session.getTopic().getId(), session.getCurrentDifficulty(),
+                userId, session.getId(), question.getId(),session.getTopic(), session.getCurrentDifficulty(),
                 isCorrect, request.confidenceRating(), session.getTargetAudience());
 
         return new AnswerResponse(
