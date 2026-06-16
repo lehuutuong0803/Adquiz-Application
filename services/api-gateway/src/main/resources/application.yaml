@@ -1,3 +1,35 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: api-gateway
+
+  # Routes
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: content-service
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/sessions/**, /api/topics/**, /api/reviews/**
+
+            - id: analytics-service
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/analytics/**
+  # Security
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/adquiz
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

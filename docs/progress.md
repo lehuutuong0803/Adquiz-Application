@@ -29,7 +29,7 @@ Update this file at the end of every session.
 - [x] Set up Docker Compose (Keycloak, Kafka, PostgreSQL instances)
 - [x] Configure Keycloak realm, client, and roles
 - [x] Set up Docker Compose and verify all infrastructure containers healthy
-- [ ] Set up api-gateway (Spring Cloud Gateway + JWT validation)
+- [x] Set up api-gateway (Spring Cloud Gateway + JWT validation)
 
 ---
 
@@ -286,5 +286,23 @@ Update this file at the end of every session.
 1. Set up `api-gateway` (Spring Cloud Gateway + JWT validation, routes all 3 services) — Phase 2 remaining item
 2. Then start Phase 6 (React frontend)
 3. Backlog carried forward: unit tests (deferred); enum refactor for `mode`/`status` (deferred)
+
+---
+
+### Session 7 — [2026-06-16]
+**Discussed:**
+- Set up `api-gateway` (port 8080, `com.adquiz.gateway`) using Spring Cloud Gateway WebFlux (`spring-cloud-starter-gateway-server-webflux`)
+- Chose WebFlux reactive gateway over MVC gateway for richer filter ecosystem and maturity
+- Configured routes: `/api/sessions/**, /api/topics/**, /api/reviews/**` → `content-service:8081`; `/api/analytics/**` → `analytics-service:8082`; `ai-generation-service` intentionally not exposed (internal only)
+- Updated config key from deprecated `spring.cloud.gateway.routes` to `spring.cloud.gateway.server.webflux.routes` per Spring Cloud migration warning
+- Wrote `SecurityConfig` using reactive Spring Security (`@EnableWebFluxSecurity`, `SecurityWebFilterChain`, `ServerHttpSecurity`) — different API from MVC `SecurityFilterChain` but same intent
+- Fixed two startup issues: wrong Keycloak port (`8081` → `8180`) in `issuer-uri`; added `netty-resolver-dns-native-macos` (classifier `osx-aarch_64`) to fix macOS Netty DNS warning
+- Verified gateway end to end: requests with valid JWT routed correctly to downstream services; requests without JWT rejected with `401` at the gateway before reaching any service
+
+**Stopped at:** All backend services complete and verified through the gateway. Ready to start Phase 6 (React frontend).
+
+**Next session should:**
+1. Start Phase 6 — React frontend setup (Vite + React, Keycloak integration, routing)
+2. Backlog carried forward: unit tests (deferred); enum refactor for `mode`/`status` (deferred)
 
 ---
