@@ -141,6 +141,12 @@ public class SessionService {
             double finalAccuracy = (double) correctAnswer / session.getTotalQuestions();
             spacedRepetitionService.recordSessionCompletion(userId, session.getTopic(), finalAccuracy);
 
+            // last answer also needs to be tracked in analytics
+            kafkaPublisher.publishAnswerSubmitted(
+                    userId, session.getId(), question.getId(), session.getTopic(),
+                    session.getCurrentDifficulty(), isCorrect, request.confidenceRating(),
+                    session.getTargetAudience());
+
             kafkaPublisher.publishSessionCompleted(
                     userId,
                     session.getId(),

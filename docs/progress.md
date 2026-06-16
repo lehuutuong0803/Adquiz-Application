@@ -75,13 +75,13 @@ Update this file at the end of every session.
 
 ## Phase 5 — Analytics Service
 
-- [ ] Set up Spring Boot project
-- [ ] Implement Kafka consumer (answer-submitted)
-- [ ] Implement streak tracking
-- [ ] Implement accuracy by topic
-- [ ] Implement weak area detection
-- [ ] Implement daily activity tracking
-- [ ] Expose REST API for dashboard stats
+- [x] Set up Spring Boot project
+- [x] Implement Kafka consumer (answer-submitted + session-completed)
+- [x] Implement streak tracking
+- [x] Implement accuracy by topic
+- [x] Implement weak area detection
+- [x] Implement daily activity tracking
+- [x] Expose REST API for dashboard stats
 
 ---
 
@@ -263,5 +263,28 @@ Update this file at the end of every session.
 **Next session should:**
 1. Decide next focus: set up `api-gateway` (Phase 2 remaining item), start Phase 5 (analytics-service), or start Phase 6 (React frontend)
 2. Backlog carried forward: unit tests for `AdaptiveAlgorithm` and SM-2 (deferred); refactor `mode`/`status` from String constants to Java enums (deferred)
+
+---
+
+### Session 6 — [2026-06-16]
+**Discussed:**
+- Decided to implement `analytics-service` before `api-gateway` (so gateway can route all services at once)
+- Set up `analytics-service` Spring Boot project (port 8082, `analytics_db`, package `com.adquiz.analytics`)
+- Fixed typo in generated project: `analytics-serivce` → `analytics-service` (folder, artifactId, class names)
+- Designed and created 3 Flyway migrations: `user_streaks` (V1, natural UUID PK), `topic_stats` (V2, surrogate UUID PK + unique constraint on user_id/topic_id), `daily_activity` (V3, surrogate UUID PK + unique constraint on user_id/activity_date) — chose surrogate keys over composite PKs to avoid JPA `@IdClass`/`@EmbeddedId` boilerplate, consistent with `SpacedRepetitionRecord` pattern
+- Created 3 JPA entities (`UserStreak`, `TopicStats`, `DailyActivity`), 3 repositories, `SecurityConfig`, `GlobalExceptionHandler`
+- Extended `content-service` Kafka events for Option 1 (topic name denormalization): added `topicName`/`parentTopicName` to `AnswerSubmittedEvent` and `SessionCompletedEvent`; updated `KafkaPublisher` to accept `Topic` entity instead of `topicId`; fixed `completeAt` → `completedAt` typo in `SessionCompletedEvent`; updated `SessionService` call sites
+- Created local event records in `analytics-service` (`AnswerSubmittedEvent`, `SessionCompletedEvent` with `@JsonIgnoreProperties(ignoreUnknown = true)`) + configured `spring.json.type.mapping` in `application.yaml` to translate content-service type headers to local types
+- Implemented `AnalyticsService` with Kafka handlers refactored out of `KafkaConsumer` (separation of concerns): `handleAnswerSubmitted` updates all 3 tables; `handleSessionCompleted` updates `daily_activity.sessionsCompleted`; streak logic uses early-return guard when `lastActiveDate == today` to avoid redundant DB writes
+- Fixed bug: last question's answer was never published as `ANSWER_SUBMITTED` (only `SESSION_COMPLETED` was fired) — added `publishAnswerSubmitted` call in the `isLastQuestion` branch of `SessionService.submitAnswer` before `publishSessionCompleted`
+- Created `AnalyticsController` (`GET /api/analytics/streak`, `/accuracy`, `/weak-areas`, `/activity`) + 4 DTOs (`StreakDto`, `TopicAccuracyDto`, `WeakAreaDto`, `DailyActivityDto`)
+- Verified all 4 endpoints end to end against live data: streak, accuracy, weak-areas (filtered by `totalAnswered >= 5`), daily activity all returned correct values
+
+**Stopped at:** Phase 5 (analytics-service) fully implemented and verified. All backend services (content-service, ai-generation-service, analytics-service) are complete.
+
+**Next session should:**
+1. Set up `api-gateway` (Spring Cloud Gateway + JWT validation, routes all 3 services) — Phase 2 remaining item
+2. Then start Phase 6 (React frontend)
+3. Backlog carried forward: unit tests (deferred); enum refactor for `mode`/`status` (deferred)
 
 ---

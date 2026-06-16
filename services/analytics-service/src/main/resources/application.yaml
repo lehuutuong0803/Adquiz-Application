@@ -35,6 +35,9 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.adquiz.*"
+        spring.json.type.mapping: >
+          com.adquiz.content.kafka.AnswerSubmittedEvent:com.adquiz.analytics.kafka.AnswerSubmittedEvent,
+          com.adquiz.content.kafka.SessionCompletedEvent:com.adquiz.analytics.kafka.SessionCompletedEvent
 
   # Security
   security:
