@@ -97,13 +97,40 @@ Update this file at the end of every session.
 
 ## Phase 6 — Frontend (React)
 
-- [ ] Set up React project
-- [ ] Integrate Keycloak (login, register, JWT)
-- [ ] Build landing page
-- [ ] Build dashboard (streak, due reviews, accuracy)
-- [ ] Build quiz session flow (question, confidence rating, feedback)
-- [ ] Build review queue (spaced repetition)
-- [ ] Build progress screen (heatmap, accuracy charts, weak areas)
+**Tech stack:** Vite + React + TypeScript  
+**Dev server:** `http://localhost:5173`  
+**API base URL:** `http://localhost:8080` (all requests via api-gateway)
+
+**Pages and routes:**
+
+| Page | Route | Purpose |
+|---|---|---|
+| Login | `/login` | Keycloak-powered login/register — redirect here if unauthenticated |
+| Dashboard | `/` | Streak widget, due-reviews count, accuracy summary, recent activity |
+| Topic Search | `/topics` | Search/browse topics, select mode (ADAPTIVE/REVIEW), start session |
+| Quiz Session | `/sessions/:id` | Active question, options, confidence rating (1-3), feedback per answer |
+| Session Complete | `/sessions/:id/complete` | Final score, accuracy, next review date — back to Dashboard |
+| Review Queue | `/reviews` | List of topics due today (`GET /api/reviews/due`), start REVIEW session |
+| Progress | `/progress` | Accuracy per topic, weak areas (bottom 5), daily activity heatmap |
+
+**User flows:**
+1. **New quiz:** Login → Dashboard → Topic Search → Quiz Session (ADAPTIVE) → Session Complete → Dashboard
+2. **Review:** Dashboard → Review Queue → Quiz Session (REVIEW) → Session Complete → Dashboard
+3. **Progress check:** Dashboard → Progress → Dashboard
+
+**Design decisions made:**
+- Topic Search is its own page (not a modal) — keeps navigation transparent and non-overlapping
+- Session Complete has no "Start Review" button — `nextReviewDate` is always tomorrow at minimum, so it would never be immediately actionable
+- All API calls go through `localhost:8080` (api-gateway), never to service ports directly
+
+- [ ] Set up React project (Vite + React + TypeScript) — **DONE, dev server running**
+- [ ] Integrate Keycloak (login, register, JWT, protected routes)
+- [ ] Build Dashboard page (streak, due reviews count, accuracy summary)
+- [ ] Build Topic Search page (fuzzy search, mode selection, session creation)
+- [ ] Build Quiz Session page (question flow, confidence rating, feedback)
+- [ ] Build Session Complete page (score, accuracy, next review date)
+- [ ] Build Review Queue page (due topics list)
+- [ ] Build Progress page (accuracy per topic, weak areas, activity heatmap)
 
 ---
 
@@ -304,5 +331,24 @@ Update this file at the end of every session.
 **Next session should:**
 1. Start Phase 6 — React frontend setup (Vite + React, Keycloak integration, routing)
 2. Backlog carried forward: unit tests (deferred); enum refactor for `mode`/`status` (deferred)
+
+---
+
+### Session 8 — [2026-06-16]
+**Discussed:**
+- Decided to start Phase 6 (React frontend) before api-gateway was already done
+- Set up `frontend/` using Vite + React + TypeScript (`npm create vite@latest frontend -- --template react-ts`) — dev server running at `localhost:5173`
+- Designed 7-page app structure with 3 user flows (see Phase 6 section above)
+- Design decisions: Topic Search = own page (not modal); Session Complete has no "Start Review" button (nextReviewDate is always tomorrow minimum)
+
+**Stopped at:** Frontend scaffolded and page/flow design agreed. Keycloak integration not yet started.
+
+**Next session should:**
+1. Install dependencies: `react-router-dom`, `keycloak-js`, `axios` (or native fetch)
+2. Set up Keycloak integration — create `keycloak.ts` config, `AuthProvider` wrapping the app, protected route guard that redirects unauthenticated users to Keycloak login
+3. Set up React Router with all 7 routes
+4. Build Dashboard page first (simplest — just displays data from 4 analytics endpoints)
+5. All API calls use base URL `http://localhost:8080` (api-gateway)
+6. Backlog: unit tests (deferred); enum refactor (deferred)
 
 ---
