@@ -1,0 +1,340 @@
+.topics-page {
+  max-width: 900px;
+}
+
+/* ── Search Fields ── */
+.search-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.search-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.match-badge {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--color-success);
+  margin-top: 4px;
+}
+
+/* ── Input Actions ── */
+.input-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.input-actions .topic-btn {
+  flex: none;
+  padding: 8px 16px;
+}
+
+/* ── Search ── */
+.search-wrapper {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.search-input-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0 14px;
+  transition: border-color var(--transition);
+}
+
+.search-input-container:focus-within {
+  border-color: var(--color-primary);
+}
+
+.search-icon {
+  font-size: 18px;
+  color: var(--color-text-muted);
+  margin-right: 10px;
+}
+
+.search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  padding: 12px 0;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  padding: 4px;
+  transition: color var(--transition);
+}
+
+.search-clear:hover {
+  color: var(--color-text-primary);
+}
+
+/* ── Dropdown ── */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color var(--transition);
+}
+
+.dropdown-item:hover {
+  background-color: var(--color-primary-light);
+}
+
+.dropdown-item:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dropdown-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.dropdown-parent {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── Topics Count ── */
+.topics-count {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+
+/* ── Topics Grid ── */
+.topics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.topic-card {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color var(--transition);
+}
+
+.topic-card:hover {
+  border-color: var(--color-primary);
+}
+
+.topic-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.topic-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topic-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.topic-card-parent {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.topic-card-accuracy {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.topic-card-bar {
+  height: 4px;
+  background-color: var(--color-border);
+  border-radius: 2px;
+}
+
+.topic-card-bar-fill {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ── Topic Buttons ── */
+.topic-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.topic-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity var(--transition), background-color var(--transition);
+}
+
+.topic-btn.practice {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+}
+
+.topic-btn.practice:hover {
+  opacity: 0.9;
+}
+
+.topic-btn.review {
+  background: none;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.topic-btn.review:hover {
+  background-color: var(--color-primary-light);
+}
+
+/* ── Confirmation Dialog ── */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.confirm-dialog {
+  position: relative;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 32px 28px 24px;
+  max-width: 420px;
+  width: 90%;
+}
+
+.confirm-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.confirm-close:hover {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.confirm-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.confirm-text {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.confirm-text strong {
+  color: var(--color-primary);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-actions .btn-confirm {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity var(--transition), background-color var(--transition);
+}
+
+.confirm-actions .btn-confirm.primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+}
+
+.confirm-actions .btn-confirm.primary:hover {
+  opacity: 0.9;
+}
+
+.confirm-actions .btn-confirm.secondary {
+  background: none;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-strong);
+}
+
+.confirm-actions .btn-confirm.secondary:hover {
+  background-color: var(--color-bg-surface);
+}

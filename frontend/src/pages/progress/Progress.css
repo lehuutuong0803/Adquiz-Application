@@ -1,0 +1,151 @@
+.progress-page {
+  max-width: 900px;
+}
+
+/* ── Overview Stats ── */
+.progress-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.overview-stat {
+  background-color: rgba(124, 58, 237, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overview-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.overview-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* ── Sections ── */
+.progress-section {
+  margin-bottom: 32px;
+}
+
+.section-heading {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 14px;
+}
+
+.empty-state {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  padding: 20px 0;
+}
+
+/* ── Heatmap ── */
+.heatmap-card {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.heatmap-legend-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0 4px;
+}
+
+.heatmap-cell.legend {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Topic Accuracy List ── */
+.topic-accuracy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accuracy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.accuracy-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accuracy-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.accuracy-parent {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.accuracy-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+}
+
+.accuracy-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-width: 36px;
+  text-align: right;
+}
+
+.accuracy-bar {
+  flex: 1;
+  height: 6px;
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
+
+.accuracy-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}

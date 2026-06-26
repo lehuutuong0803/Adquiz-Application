@@ -19,7 +19,7 @@ public interface TopicRepository extends JpaRepository<Topic, UUID> {
     @Query(value = """
             SELECT * FROM topics
             WHERE parent_id = :parentId
-            AND similarity(name, :query) > 0.4
+            AND (name ILIKE '%' || :query || '%' OR similarity(name, :query) > 0.2)
             ORDER BY similarity(name, :query) DESC
             LIMIT 5
             """, nativeQuery = true)
@@ -33,7 +33,7 @@ public interface TopicRepository extends JpaRepository<Topic, UUID> {
     @Query(value = """
             SELECT * FROM topics
             WHERE parent_id IS NULL
-            AND similarity(name, :query) > 0.4
+            AND (name ILIKE '%' || :query || '%' OR similarity(name, :query) > 0.2)
             ORDER BY similarity(name, :query) DESC
             LIMIT 5
             """, nativeQuery = true)

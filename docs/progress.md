@@ -5,7 +5,7 @@ Update this file at the end of every session.
 
 ---
 
-## Current Status: Phase 4 — Content Service (In Progress)
+## Current Status: Phase 6 — Frontend (In Progress)
 
 ---
 
@@ -123,13 +123,47 @@ Update this file at the end of every session.
 - Session Complete has no "Start Review" button — `nextReviewDate` is always tomorrow at minimum, so it would never be immediately actionable
 - All API calls go through `localhost:8080` (api-gateway), never to service ports directly
 
-- [ ] Set up React project (Vite + React + TypeScript) — **DONE, dev server running**
-- [ ] Integrate Keycloak (login, register, JWT, protected routes)
-- [ ] Build Dashboard page (streak, due reviews count, accuracy summary)
-- [ ] Build Topic Search page (fuzzy search, mode selection, session creation)
-- [ ] Build Quiz Session page (question flow, confidence rating, feedback)
-- [ ] Build Session Complete page (score, accuracy, next review date)
-- [ ] Build Review Queue page (due topics list)
+**UI design:**
+- Collapsible sidebar (expanded 200px / collapsed 48px) — icon-only when collapsed, icon + label when expanded
+- Dark mode toggle in top bar (persisted in localStorage via ThemeContext)
+- Violet (#7C3AED) as primary brand color, dark theme uses #0f0f14 background
+- Topic Search uses live dropdown suggestions + per-card Practice/Review buttons
+- Landing page is public, all other routes are protected via Keycloak
+
+**Frontend folder structure:**
+```
+src/
+├── api/client.ts              — Axios instance (baseURL: localhost:8080, auto-attaches Bearer token)
+├── auth/keycloak.ts           — Keycloak instance (realm: adquiz, clientId: adquiz-frontend)
+├── auth/AuthProvider.tsx      — check-sso init, login/register/logout helpers, token interceptor
+├── context/ThemeContext.tsx    — dark/light toggle state, persisted in localStorage, sets data-theme on <html>
+├── components/layout/
+│   ├── sidebar/Sidebar.tsx+css — collapsible nav, uses NavLink for active route highlighting
+│   └── app-layout/AppLayout.tsx+css — shell (sidebar + top bar + Outlet), wraps all protected routes
+├── pages/                     — one file per page (placeholders for now)
+├── App.tsx                    — BrowserRouter, public landing route + protected layout route with Outlet
+├── main.tsx                   — entry point: ThemeProvider > App (AuthProvider moved inside App.tsx)
+└── index.css                  — CSS variables for light/dark themes, sidebar widths, transition speed
+```
+
+- [x] Set up React project (Vite + React + TypeScript)
+- [x] Design UI (pages, user flows, sidebar, dark mode, topic search interaction)
+- [x] Install dependencies (react-router-dom, keycloak-js, axios)
+- [x] Implement theme system (CSS variables + ThemeContext + dark mode toggle)
+- [x] Implement auth integration (keycloak.ts, AuthProvider with check-sso, token interceptor)
+- [x] Implement app shell (collapsible Sidebar + AppLayout with Outlet + top bar)
+- [x] Set up React Router (public landing route, protected layout route, 7 page placeholders)
+- [x] Create Keycloak client `adquiz-frontend` (public client in adquiz realm, redirect URIs updated to localhost:5173)
+- [x] Build Landing page (hero with mockup, features, how it works, stats, CTA, gradient blobs background)
+- [x] Build Dashboard page (quick actions, streak with motivational message, due reviews, today summary, weak areas, recent activity, glass-effect stat cards)
+- [x] Build Topic Search page (two-field search: parent + child, debounced backend fuzzy search via pg_trgm, auto-match on blur, confirmation dialog for fuzzy matches, per-card Practice/Review buttons, Load more pagination, real API connected)
+  - Added `GET /api/topics/search-parents?q=` and `GET /api/topics/search?q=&parentId=` endpoints to content-service
+  - Updated TopicRepository queries to use `ILIKE` + `similarity() > 0.3` for better partial matching
+  - **TODO:** add `Pageable` support to TopicController for large topic lists
+- [x] Build Quiz Session page (real API, progress bar, bloom badge, answer feedback with explanation, confidence rating, session loading overlay)
+- [x] Build Session Complete page (conic-gradient score ring, color-coded accuracy, motivational message, stats row)
+- [x] Build Review Queue page (real API, due topics list, empty state with encouragement, session loading overlay)
+- [x] Build SessionConfigDialog (reusable question count picker, stepper buttons, used in TopicSearch + ReviewQueue)
 - [ ] Build Progress page (accuracy per topic, weak areas, activity heatmap)
 
 ---
@@ -343,12 +377,28 @@ Update this file at the end of every session.
 
 **Stopped at:** Frontend scaffolded and page/flow design agreed. Keycloak integration not yet started.
 
+---
+
+### Session 9 — [2026-06-20]
+**Discussed:**
+- Designed full UI for all 7 pages: violet-first brand, collapsible sidebar, dark mode toggle, topic search with live dropdown + per-card buttons
+- User confirmed: collapsible sidebar, dark mode toggle, topic search with dropdown filtering (not a required click — cards filter by typed text regardless, dropdown is just a shortcut)
+- Installed dependencies: `react-router-dom`, `keycloak-js`, `axios`
+- Implemented theme system: CSS variables in `index.css` (light/dark via `[data-theme]` selector), `ThemeContext` (useState + useEffect + localStorage persistence)
+- Implemented auth: `keycloak.ts` (instance config), `AuthProvider` (check-sso init, Axios interceptor for Bearer token, exported login/register/logout/isAuthenticated helpers)
+- Key architectural decision: `AuthProvider` wraps only protected routes (not the whole app), so the landing page renders without waiting for Keycloak. `ThemeProvider` wraps everything (dark mode works on landing page too)
+- Implemented `api/client.ts`: Axios instance with baseURL `http://localhost:8080`
+- Implemented collapsible `Sidebar` (NavLink for active highlighting, collapsed state from parent) + `AppLayout` (sidebar + top bar + Outlet)
+- Set up `App.tsx` with React Router: public `/landing` route, protected layout route wrapping 6 page placeholders, `ProtectedRoute` guard, catch-all redirect to `/`
+- Updated `main.tsx`: ThemeProvider > App (AuthProvider lives inside App.tsx, not main.tsx)
+- Verified landing page renders at `localhost:5173/landing`
+
+**Stopped at:** App shell complete (sidebar, dark mode, router, auth). All pages are placeholders. Ready to build real pages starting with Landing page.
+
 **Next session should:**
-1. Install dependencies: `react-router-dom`, `keycloak-js`, `axios` (or native fetch)
-2. Set up Keycloak integration — create `keycloak.ts` config, `AuthProvider` wrapping the app, protected route guard that redirects unauthenticated users to Keycloak login
-3. Set up React Router with all 7 routes
-4. Build Dashboard page first (simplest — just displays data from 4 analytics endpoints)
-5. All API calls use base URL `http://localhost:8080` (api-gateway)
-6. Backlog: unit tests (deferred); enum refactor (deferred)
+1. Build Landing page (hero section, login/register buttons calling `login()`/`register()`)
+2. Create `adquiz-frontend` public client in Keycloak
+3. Build Dashboard page (4 analytics API calls, streak/reviews/accuracy/activity)
+4. Backlog: unit tests (deferred); enum refactor (deferred)
 
 ---

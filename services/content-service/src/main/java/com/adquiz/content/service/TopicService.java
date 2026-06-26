@@ -36,4 +36,16 @@ public class TopicService {
         List<Topic> subtopics = topicRepository.findByParentId(parentId);
         return topicMapper.toSubtopicDtoList(subtopics);
     }
+
+    @Transactional(readOnly = true)
+    public List<SubtopicDto> searchParentTopics(String query) {
+        List<Topic> matches = topicRepository.findSimilarParentTopics(query);
+        return topicMapper.toSubtopicDtoList(matches);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubtopicDto> searchSubtopics(String query, UUID parentId) {
+        List<Topic> matches = topicRepository.findSimilarSubtopics(query, parentId);
+        return topicMapper.toSubtopicDtoList(matches);
+    }
 }

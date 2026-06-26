@@ -2,38 +2,59 @@ import { useEffect, useState } from 'react'
 import keycloak from './keycloak'
 import client from '../api/client'
 
-export function AuthProvider({ children } : {children: React.ReactNode}) {
-    const [ready, setReady] = useState(false)
+let initPromise: Promise<boolean> | null = null
+let interceptorAdded = false
 
-    useEffect(() => {
-        keycloak.init({onLoad: 'check-sso'}).then(() => {
-            client.interceptors.request.use((config) => {
-                if (keycloak.token) {
-                    client.defaults.headers.common['Authorization'] = `Bearer ${keycloak.token}`
-                }
-                return config
-            })
-            setReady(true)
-        })
-    }, [])
+function initKeycloak(): Promise<boolean> {
+  if (!initPromise) {
+    initPromise = keycloak
+      .init({ onLoad: 'check-sso', checkLoginIframe: false })
+      .then(authenticated => {
+        if (authenticated && !interceptorAdded) {
+          client.interceptors.request.use(config => {
+            if (keycloak.token) {
+              config.headers.Authorization = `Bearer ${keycloak.token}`
+            }
+            return config
+          })
+          interceptorAdded = true
+        }
+        return authenticated
+      })
+      .catch(err => {
+        console.warn('Keycloak init failed:', err)
+        return false
+      })
+  }
+  return initPromise
+}
 
-    if (!ready) return null
 
-    return <>{children}</>
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    initKeycloak().then(() => setReady(true))
+  }, [])
+
+  if (!ready) return null
+
+  return <>{children}</>
 }
 
 export function login() {
-    keycloak.login()
-}
-
-export function logout() {
-    keycloak.logout({ redirectUri: window.location.origin })
+  keycloak.login({ redirectUri: window.location.origin + '/' })
 }
 
 export function register() {
-    keycloak.register()
+  keycloak.register({ redirectUri: window.location.origin + '/' })
+}
+
+export function logout() {
+  keycloak.logout({ redirectUri: window.location.origin + '/landing' })
 }
 
 export function isAuthenticated() {
-    return keycloak.authenticated ?? false
+    console.log('isAuthenticated called:', keycloak.authenticated)
+  return keycloak.authenticated ?? false
 }
